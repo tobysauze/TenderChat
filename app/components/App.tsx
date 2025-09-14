@@ -70,7 +70,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <img src="/tender-logo.svg" alt="Tender" className="h-16 mx-auto mb-8" />
+          <img src={`${process.env.NODE_ENV === 'production' ? '/TenderChat' : ''}/tender-logo.svg`} alt="Tender" className="h-16 mx-auto mb-8" />
           <h1 className="text-4xl font-bold text-[var(--tender-navy)] mb-4">
             Welcome to Tender
           </h1>

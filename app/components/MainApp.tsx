@@ -208,7 +208,7 @@ export default function MainApp() {
     <main className="min-h-screen">
       {/* Top Bar */}
       <div className="h-16 bg-white flex items-center justify-between px-6 border-b">
-        <img src="/tender-logo.svg" alt="Tender" className="h-12" />
+        <img src={`${process.env.NODE_ENV === 'production' ? '/TenderChat' : ''}/tender-logo.svg`} alt="Tender" className="h-12" />
         <button
           onClick={signOut}
           className="text-[var(--tender-navy)] hover:text-[var(--tender-red)] font-medium"
