@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
@@ -74,6 +74,16 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [matchId, setMatchId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Get the match ID for this conversation
   useEffect(() => {
@@ -135,18 +145,57 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
         table: 'messages',
         filter: `match_id=eq.${matchId}`,
       }, (payload) => {
+        console.log('Real-time message received:', payload);
         const newMessage: Message = {
           id: payload.new.id,
           senderId: payload.new.sender_id,
           text: payload.new.content,
           timestamp: new Date(payload.new.created_at),
         };
-        setMessages(prev => [...prev, newMessage]);
+        setMessages(prev => {
+          // Check if message already exists to avoid duplicates
+          const exists = prev.some(msg => msg.id === newMessage.id);
+          if (exists) return prev;
+          return [...prev, newMessage];
+        });
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    // Fallback: Poll for new messages every 2 seconds if real-time fails
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('match_id', matchId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const formattedMessages: Message[] = data?.map(msg => ({
+          id: msg.id,
+          senderId: msg.sender_id,
+          text: msg.content,
+          timestamp: new Date(msg.created_at),
+        })) || [];
+
+        setMessages(prev => {
+          // Only update if we have new messages
+          if (formattedMessages.length > prev.length) {
+            return formattedMessages;
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.error('Error polling messages:', error);
+      }
+    }, 2000);
 
     return () => {
       subscription.unsubscribe();
+      clearInterval(pollInterval);
     };
   }, [matchId]);
 
@@ -235,6 +284,7 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
               </div>
             ))
           )}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Message Input */}
