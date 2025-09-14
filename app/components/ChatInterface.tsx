@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
+import { supabase } from '../../lib/supabase';
 
 interface Message {
   id: string;
@@ -71,52 +72,105 @@ const getAutomatedResponses = (role: string): string[] => {
 export default function ChatInterface({ matchedProfile, currentUser, onClose }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [matchId, setMatchId] = useState<string | null>(null);
 
-  // Initial greeting
+  // Get the match ID for this conversation
   useEffect(() => {
-    const initialGreeting: Message = {
-      id: 'initial',
-      senderId: matchedProfile.id,
-      text: `Hi ${currentUser.name}! Thanks for connecting. I'm currently ${matchedProfile.availability?.toLowerCase() || 'looking for opportunities'}.`,
-      timestamp: new Date(),
-    };
-    setMessages([initialGreeting]);
-  }, [matchedProfile.id, matchedProfile.availability, currentUser.name]);
+    const getMatchId = async () => {
+      if (!currentUser || !matchedProfile) return;
 
-  const simulateResponse = () => {
-    setIsTyping(true);
-    const responses = getAutomatedResponses(matchedProfile.role);
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-    
-    // Simulate typing delay between 1-3 seconds
-    setTimeout(() => {
-      const response: Message = {
-        id: Date.now().toString(),
-        senderId: matchedProfile.id,
-        text: randomResponse,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, response]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 2000);
-  };
+      const { data, error } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user1_id.eq.${currentUser.id},user2_id.eq.${matchedProfile.user_id}),and(user1_id.eq.${matchedProfile.user_id},user2_id.eq.${currentUser.id})`)
+        .single();
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-
-    const message: Message = {
-      id: Date.now().toString(),
-      senderId: currentUser.id,
-      text: newMessage.trim(),
-      timestamp: new Date(),
+      if (data) {
+        setMatchId(data.id);
+      }
     };
 
-    setMessages(prev => [...prev, message]);
+    getMatchId();
+  }, [currentUser, matchedProfile]);
+
+  // Load real messages from the database
+  useEffect(() => {
+    if (!matchId) return;
+
+    const loadMessages = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('match_id', matchId)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        const formattedMessages: Message[] = data?.map(msg => ({
+          id: msg.id,
+          senderId: msg.sender_id,
+          text: msg.content,
+          timestamp: new Date(msg.created_at),
+        })) || [];
+
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMessages();
+
+    // Set up real-time subscription for new messages
+    const subscription = supabase
+      .channel(`messages:${matchId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `match_id=eq.${matchId}`,
+      }, (payload) => {
+        const newMessage: Message = {
+          id: payload.new.id,
+          senderId: payload.new.sender_id,
+          text: payload.new.content,
+          timestamp: new Date(payload.new.created_at),
+        };
+        setMessages(prev => [...prev, newMessage]);
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [matchId]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !matchId || !currentUser) return;
+
+    const messageText = newMessage.trim();
     setNewMessage('');
 
-    // Simulate response after a short delay
-    simulateResponse();
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          match_id: matchId,
+          sender_id: currentUser.id,
+          content: messageText,
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Re-add the message to the input if sending failed
+      setNewMessage(messageText);
+    }
   };
 
   return (
@@ -145,35 +199,41 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
 
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {messages.map(message => (
-            <div 
-              key={message.id}
-              className={`flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}
-            >
+          {loading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="text-gray-500">Loading messages...</div>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="text-gray-500 text-center">
+                <p>Start the conversation!</p>
+                <p className="text-sm mt-1">Send a message to begin chatting.</p>
+              </div>
+            </div>
+          ) : (
+            messages.map(message => (
               <div 
-                className={`max-w-[70%] rounded-[20px] px-4 py-3 ${
-                  message.senderId === currentUser.id 
-                    ? 'bg-gradient-to-r from-[#fd267a] to-[#ff6036] text-white' 
-                    : 'bg-white text-gray-900 border'
-                }`}
+                key={message.id}
+                className={`flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}
               >
-                <p className="text-[15px]">{message.text}</p>
-                <p className={`text-xs mt-1 ${
-                  message.senderId === currentUser.id 
-                    ? 'text-white/70' 
-                    : 'text-gray-500'
-                }`}>
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+                <div 
+                  className={`max-w-[70%] rounded-[20px] px-4 py-3 ${
+                    message.senderId === currentUser.id 
+                      ? 'bg-gradient-to-r from-[#fd267a] to-[#ff6036] text-white' 
+                      : 'bg-white text-gray-900 border'
+                  }`}
+                >
+                  <p className="text-[15px]">{message.text}</p>
+                  <p className={`text-xs mt-1 ${
+                    message.senderId === currentUser.id 
+                      ? 'text-white/70' 
+                      : 'text-gray-500'
+                  }`}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-white border rounded-[20px] px-4 py-3">
-                <p className="text-[#fd267a]">typing...</p>
-              </div>
-            </div>
+            ))
           )}
         </div>
 
