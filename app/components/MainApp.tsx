@@ -84,25 +84,41 @@ export default function MainApp() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // First get all matches for this user
+      const { data: matches, error: matchesError } = await supabase
         .from('matches')
-        .select(`
-          *,
-          profile1:profiles!matches_user1_id_fkey(*, photos (url, order)),
-          profile2:profiles!matches_user2_id_fkey(*, photos (url, order))
-        `)
+        .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
 
-      if (error) throw error;
+      if (matchesError) throw matchesError;
 
-      // Extract matched profiles
-      const matchedProfiles = data?.map(match => {
-        const matchedProfile = match.user1_id === user.id ? match.profile2 : match.profile1;
-        return {
-          ...matchedProfile,
-          photos: matchedProfile.photos?.sort((a: any, b: any) => a.order - b.order) || []
-        };
-      }) || [];
+      if (!matches || matches.length === 0) {
+        setMatches([]);
+        return;
+      }
+
+      // Get all the matched user IDs
+      const matchedUserIds = matches.map(match => 
+        match.user1_id === user.id ? match.user2_id : match.user1_id
+      );
+
+      // Get profiles for all matched users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          photos (url, order)
+        `)
+        .in('user_id', matchedUserIds);
+
+      if (profilesError) throw profilesError;
+
+      // Transform profiles to include imageUrl and sort photos
+      const matchedProfiles = profiles?.map(profile => ({
+        ...profile,
+        imageUrl: profile.photos?.[0]?.url || '/default-profile.jpg',
+        photos: profile.photos?.sort((a: any, b: any) => a.order - b.order) || []
+      })) || [];
 
       setMatches(matchedProfiles);
     } catch (error) {
@@ -131,8 +147,13 @@ export default function MainApp() {
 
         if (existingMatch) {
           // Already matched!
-          setMatches(prev => [...prev, currentProfile]);
-          setMatchAlertProfile(currentProfile);
+          const formattedProfile = {
+            ...currentProfile,
+            imageUrl: currentProfile.photos?.[0]?.url || '/default-profile.jpg',
+            photos: currentProfile.photos?.sort((a: any, b: any) => a.order - b.order) || []
+          };
+          setMatches(prev => [...prev, formattedProfile]);
+          setMatchAlertProfile(formattedProfile);
           setShowMatchAlert(true);
           setTimeout(() => setShowMatchAlert(false), 2000);
         } else {
@@ -158,8 +179,14 @@ export default function MainApp() {
               });
 
             if (!matchError) {
-              setMatches(prev => [...prev, currentProfile]);
-              setMatchAlertProfile(currentProfile);
+              // Format the profile properly before adding to matches
+              const formattedProfile = {
+                ...currentProfile,
+                imageUrl: currentProfile.photos?.[0]?.url || '/default-profile.jpg',
+                photos: currentProfile.photos?.sort((a: any, b: any) => a.order - b.order) || []
+              };
+              setMatches(prev => [...prev, formattedProfile]);
+              setMatchAlertProfile(formattedProfile);
               setShowMatchAlert(true);
               setTimeout(() => setShowMatchAlert(false), 2000);
             }
