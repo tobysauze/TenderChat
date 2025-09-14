@@ -25,6 +25,15 @@ CREATE TABLE photos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create likes table
+CREATE TABLE likes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  liker_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  liked_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(liker_id, liked_id)
+);
+
 -- Create matches table
 CREATE TABLE matches (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -46,6 +55,7 @@ CREATE TABLE messages (
 -- Enable Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
@@ -79,6 +89,14 @@ CREATE POLICY "Users can delete photos for their profile" ON photos FOR DELETE U
   )
 );
 
+-- Likes policies
+CREATE POLICY "Users can view their likes" ON likes FOR SELECT USING (
+  auth.uid() = liker_id OR auth.uid() = liked_id
+);
+CREATE POLICY "Users can create likes" ON likes FOR INSERT WITH CHECK (
+  auth.uid() = liker_id
+);
+
 -- Matches policies
 CREATE POLICY "Users can view their matches" ON matches FOR SELECT USING (
   auth.uid() = user1_id OR auth.uid() = user2_id
@@ -107,6 +125,8 @@ CREATE POLICY "Users can send messages in their matches" ON messages FOR INSERT 
 -- Create indexes for better performance
 CREATE INDEX idx_profiles_user_id ON profiles(user_id);
 CREATE INDEX idx_photos_profile_id ON photos(profile_id);
+CREATE INDEX idx_likes_liker_id ON likes(liker_id);
+CREATE INDEX idx_likes_liked_id ON likes(liked_id);
 CREATE INDEX idx_matches_user1_id ON matches(user1_id);
 CREATE INDEX idx_matches_user2_id ON matches(user2_id);
 CREATE INDEX idx_messages_match_id ON messages(match_id);

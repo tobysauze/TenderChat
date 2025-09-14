@@ -118,23 +118,59 @@ export default function MainApp() {
     
     setTimeout(async () => {
       if (direction === 'right' && currentProfile) {
-        // Check if it's a match
-        const isMatch = Math.random() < 0.3; // 30% match rate for demo
-        
-        if (isMatch) {
-          // Create match
-          const { error } = await supabase
-            .from('matches')
-            .insert({
-              user1_id: user.id,
-              user2_id: currentProfile.user_id,
-            });
+        // Check if there's already a match (mutual like)
+        const { data: existingMatch, error: checkError } = await supabase
+          .from('matches')
+          .select('*')
+          .or(`and(user1_id.eq.${currentProfile.user_id},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${currentProfile.user_id})`)
+          .single();
 
-          if (!error) {
-            setMatches(prev => [...prev, currentProfile]);
-            setMatchAlertProfile(currentProfile);
-            setShowMatchAlert(true);
-            setTimeout(() => setShowMatchAlert(false), 2000);
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking for existing match:', checkError);
+        }
+
+        if (existingMatch) {
+          // Already matched!
+          setMatches(prev => [...prev, currentProfile]);
+          setMatchAlertProfile(currentProfile);
+          setShowMatchAlert(true);
+          setTimeout(() => setShowMatchAlert(false), 2000);
+        } else {
+          // Check if the other person has already liked us
+          const { data: existingLike, error: likeError } = await supabase
+            .from('likes')
+            .select('*')
+            .eq('liker_id', currentProfile.user_id)
+            .eq('liked_id', user.id)
+            .single();
+
+          if (likeError && likeError.code !== 'PGRST116') {
+            console.error('Error checking for existing like:', likeError);
+          }
+
+          if (existingLike) {
+            // It's a match! Create the match record
+            const { error: matchError } = await supabase
+              .from('matches')
+              .insert({
+                user1_id: user.id,
+                user2_id: currentProfile.user_id,
+              });
+
+            if (!matchError) {
+              setMatches(prev => [...prev, currentProfile]);
+              setMatchAlertProfile(currentProfile);
+              setShowMatchAlert(true);
+              setTimeout(() => setShowMatchAlert(false), 2000);
+            }
+          } else {
+            // Just record the like for potential future match
+            await supabase
+              .from('likes')
+              .insert({
+                liker_id: user.id,
+                liked_id: currentProfile.user_id,
+              });
           }
         }
       }
