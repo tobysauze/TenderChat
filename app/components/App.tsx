@@ -75,7 +75,7 @@ export default function App() {
             Welcome to Tender
           </h1>
           <p className="text-xl text-gray-600 mb-4">
-            Find your perfect yacht crew match
+            Find your perfect yachtie match
           </p>
           {isDemoMode && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 max-w-md mx-auto">
