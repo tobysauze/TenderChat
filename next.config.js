@@ -9,6 +9,9 @@ const nextConfig = {
   experimental: {
     appDir: true,
   },
+  // Add base path for GitHub Pages
+  basePath: process.env.NODE_ENV === 'production' ? '/TenderChat' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/TenderChat/' : '',
 }
 
 module.exports = nextConfig
