@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --tender-navy: #1B3B5B;
+  --tender-red: #E94E4E;
+  --tender-blue: #A5D8DD;
+}
+
+body {
+  @apply bg-white;
+}
+
+/* Card animations */
+.card-container {
+  @apply relative w-full;
+  height: 600px;
+}
+
+.card {
+  @apply w-full h-[600px] rounded-3xl overflow-hidden shadow-xl;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
+}
+
+/* Third card sits at the bottom */
+.card-third {
+  z-index: 1;
+  transform: translateY(4px) scale(0.98) !important;
+  transition: none !important;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Next card stays completely static */
+.card-next {
+  z-index: 2;
+  transform: translateY(2px) scale(0.99) !important;
+  transition: none !important;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* Current card gets animated on top */
+.card-current {
+  z-index: 3;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease;
+  touch-action: none; /* Prevent default touch behaviors */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.swipe-left {
+  transform: translateX(-150%) rotate(-20deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.swipe-right {
+  transform: translateX(150%) rotate(20deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Visual feedback for dragging */
+.card-current.dragging {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+}
+
+/* Like/dislike indicators */
+.like-indicator {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%) rotate(-30deg);
+  background: rgba(34, 197, 94, 0.8);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 24px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dislike-indicator {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%) rotate(30deg);
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 24px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.card-current.dragging .like-indicator {
+  opacity: 1;
+}
+
+.card-current.dragging .dislike-indicator {
+  opacity: 1;
+}
+
+/* Action buttons container */
+.action-buttons {
+  @apply flex justify-center items-center gap-4 mt-6;
+  position: relative;
+  z-index: 10;
+}
+
+/* Match grid styles */
+.matches-grid {
+  @apply grid grid-cols-2 gap-2;
+}
+
+.match-card {
+  @apply relative cursor-pointer;
+  transition: transform 0.2s ease;
+}
+
+.match-card:hover {
+  transform: scale(1.02);
+}
+
+.match-image {
+  @apply aspect-square rounded-xl overflow-hidden;
+}
+
+.match-info {
+  @apply absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent text-white opacity-0;
+  transition: opacity 0.2s ease;
+}
+
+.group:hover .match-info {
+  opacity: 1;
+}
+
+.action-button {
+  @apply w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform;
+}
+
+.action-button-large {
+  @apply w-20 h-20 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform;
+}
+
+.btn-primary {
+  @apply px-6 py-3 bg-[var(--tender-navy)] text-white rounded-full font-semibold hover:opacity-90 transition-opacity;
+}
+
+.matches-button {
+  @apply px-4 py-2 bg-[var(--tender-navy)] text-white rounded-full font-semibold hover:opacity-90 transition-opacity;
+}
+
+/* Chat styles */
+.chat-container {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50;
+}
+
+.chat-window {
+  @apply bg-white rounded-2xl max-w-2xl w-full h-[600px] flex flex-col;
+}
+
+.chat-header {
+  @apply p-4 border-b flex items-center justify-between bg-[var(--tender-navy)] text-white;
+}
+
+.chat-messages {
+  @apply flex-1 p-4 overflow-y-auto space-y-4;
+}
+
+.message {
+  @apply max-w-[80%] rounded-2xl p-3;
+}
+
+.message-sent {
+  @apply ml-auto bg-[var(--tender-navy)] text-white;
+}
+
+.message-received {
+  @apply bg-gray-100;
+}
+
+.chat-input {
+  @apply p-4 border-t;
+}
+
+.chat-input-field {
+  @apply w-full px-4 py-2 rounded-full border focus:outline-none focus:border-[var(--tender-navy)];
+}
+
+.chat-send-button {
+  @apply px-6 py-2 bg-[var(--tender-navy)] text-white rounded-full font-semibold hover:opacity-90 transition-opacity disabled:opacity-50;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  @apply text-sm text-[var(--tender-navy)] italic;
+} 
