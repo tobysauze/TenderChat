@@ -5,10 +5,6 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  // Disable server-side features for static export
-  experimental: {
-    appDir: true,
-  },
   // Add base path for GitHub Pages
   basePath: process.env.NODE_ENV === 'production' ? '/TenderChat' : '',
   assetPrefix: process.env.NODE_ENV === 'production' ? '/TenderChat/' : '',

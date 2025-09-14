@@ -60,7 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         user_metadata: userData,
         created_at: new Date().toISOString(),
-      };
+        app_metadata: {},
+        aud: 'authenticated',
+        role: 'authenticated',
+        updated_at: new Date().toISOString(),
+        phone: '',
+        email_confirmed_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+        identities: [],
+        factors: [],
+        is_anonymous: false,
+      } as User;
       localStorage.setItem('demo-user', JSON.stringify(demoUser));
       setUser(demoUser);
       setSession({ user: demoUser } as Session);
@@ -84,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (demoUser) {
         const userData = JSON.parse(demoUser);
         if (userData.email === email) {
-          setUser(userData);
+          setUser(userData as User);
           setSession({ user: userData } as Session);
           return { data: { user: userData }, error: null };
         }

@@ -11,7 +11,7 @@ interface Message {
 
 interface ChatInterfaceProps {
   matchedProfile: CrewProfile;
-  currentUser: CrewProfile;
+  currentUser: any; // Accept any user type for now
   onClose: () => void;
 }
 

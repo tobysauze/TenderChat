@@ -20,6 +20,7 @@ interface Profile {
   bio: string;
   availability: string;
   photos: { url: string; order: number }[];
+  imageUrl: string; // Add this for compatibility with CrewProfile
 }
 
 export default function MainApp() {
@@ -67,7 +68,8 @@ export default function MainApp() {
       // Transform data to include photos
       const profilesWithPhotos = data?.map(profile => ({
         ...profile,
-        photos: profile.photos?.sort((a: any, b: any) => a.order - b.order) || []
+        photos: profile.photos?.sort((a: any, b: any) => a.order - b.order) || [],
+        imageUrl: profile.photos?.[0]?.url || '/default-profile.jpg' // Use first photo or default
       })) || [];
 
       setProfiles(profilesWithPhotos);
