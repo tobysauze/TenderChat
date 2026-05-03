@@ -8,6 +8,7 @@ import ChatInterface from './ChatInterface';
 import ProfileSettings from './ProfileSettings';
 import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
+import { formatLastSeen, isOnline } from '../../lib/lastSeen';
 
 interface Profile {
   id: string;
@@ -24,6 +25,7 @@ interface Profile {
   availability: string;
   photos: { url: string; order: number }[];
   imageUrl: string;
+  last_seen?: string | null;
 }
 
 const PLACEHOLDER_AVATAR = '/tender-logo.svg';
@@ -669,11 +671,19 @@ function ProfilePhoto({ profile, photoIdx = 0 }: { profile: Profile; photoIdx?: 
 }
 
 function ProfileOverlay({ profile, onInfo }: { profile: Profile; onInfo?: () => void }) {
+  const status = formatLastSeen(profile.last_seen);
+  const online = isOnline(profile.last_seen);
   return (
     <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[var(--tender-navy)]/90 via-[var(--tender-navy)]/50 to-transparent text-white">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-3xl font-bold">{profile.name}{profile.age ? `, ${profile.age}` : ''}</h2>
+          {status && (
+            <p className="text-sm opacity-90 mt-1 flex items-center gap-1.5">
+              {online && <span className="inline-block w-2 h-2 rounded-full bg-green-400" />}
+              {status}
+            </p>
+          )}
           <p className="text-xl opacity-90 mt-1">{profile.role}</p>
           {profile.experience && (
             <p className="text-lg opacity-80 mt-1">{profile.experience} experience</p>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeftIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
+import { formatLastSeen, isOnline } from '../../lib/lastSeen';
 import ProfileView from './ProfileView';
 
 interface Message {
@@ -292,8 +293,15 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
               className="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--tender-red)]"
             />
             <div className="ml-3 min-w-0">
-              <h3 className="font-semibold text-base text-[var(--tender-navy)] truncate">{matchedProfile.name}</h3>
-              <p className="text-xs text-gray-500 truncate">{matchedProfile.role} · Tap to view profile</p>
+              <h3 className="font-semibold text-base text-[var(--tender-navy)] truncate flex items-center gap-1.5">
+                {matchedProfile.name}
+                {isOnline(matchedProfile.last_seen) && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 shrink-0" aria-label="Online" />
+                )}
+              </h3>
+              <p className="text-xs text-gray-500 truncate">
+                {matchedProfile.role} · {formatLastSeen(matchedProfile.last_seen) || 'Tap to view profile'}
+              </p>
             </div>
           </button>
           <div className="relative">

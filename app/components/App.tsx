@@ -23,6 +23,30 @@ export default function App() {
     }
   }, [user, loading]);
 
+  // Online presence heartbeat: bump profiles.last_seen for the current user
+  // on mount, on focus, and every 2 minutes while the tab is open.
+  useEffect(() => {
+    if (!user || isDemoMode) return;
+
+    const ping = () => {
+      supabase
+        .from('profiles')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .then(() => {});
+    };
+
+    ping();
+    const interval = setInterval(ping, 2 * 60 * 1000);
+    const onFocus = () => ping();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [user]);
+
   const checkProfile = async () => {
     if (!user) return;
     

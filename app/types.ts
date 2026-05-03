@@ -13,4 +13,5 @@ export interface CrewProfile {
   bio?: string;
   availability?: string;
   photos?: { url: string; order: number }[];
+  last_seen?: string | null;
 }
