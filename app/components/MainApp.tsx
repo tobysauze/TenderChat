@@ -9,6 +9,7 @@ import ProfileSettings from './ProfileSettings';
 import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
 import { formatLastSeen, isOnline } from '../../lib/lastSeen';
+import { isPushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from '../../lib/push';
 
 interface Profile {
   id: string;
@@ -51,6 +52,9 @@ export default function MainApp() {
 
   const [myCompletion, setMyCompletion] = useState<{ percent: number; missing: string[] } | null>(null);
 
+  // Push notifications: 'unsupported' | 'off' | 'on' | 'busy'
+  const [pushState, setPushState] = useState<'unsupported' | 'off' | 'on' | 'busy'>('unsupported');
+
   // Touch/swipe state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -63,8 +67,41 @@ export default function MainApp() {
       loadProfiles();
       loadMatches();
       loadMyCompletion();
+      refreshPushState();
     }
   }, [user]);
+
+  const refreshPushState = async () => {
+    if (!isPushSupported()) {
+      setPushState('unsupported');
+      return;
+    }
+    const sub = await getCurrentSubscription();
+    setPushState(sub && Notification.permission === 'granted' ? 'on' : 'off');
+  };
+
+  const handleTogglePush = async () => {
+    if (!user) return;
+    setPushState('busy');
+    if (await getCurrentSubscription()) {
+      await unsubscribePush();
+      setPushState('off');
+    } else {
+      const result = await subscribePush(user.id);
+      if (!result.ok) {
+        setPushState('off');
+        if (result.reason === 'permission-denied') {
+          alert('Notifications are blocked. Enable them for tender.ink in your browser/system settings, then try again.');
+        } else if (result.reason === 'missing-vapid-key') {
+          alert('Notifications are not configured on this build yet.');
+        } else if (result.reason !== 'unsupported') {
+          alert('Could not enable notifications: ' + result.reason);
+        }
+        return;
+      }
+      setPushState('on');
+    }
+  };
 
   const loadMyCompletion = async () => {
     if (!user) return;
@@ -561,6 +598,18 @@ export default function MainApp() {
                 >
                   Edit profile
                 </button>
+                {pushState !== 'unsupported' && (
+                  <button
+                    onClick={handleTogglePush}
+                    disabled={pushState === 'busy'}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-navy)] font-medium border-t flex items-center justify-between disabled:opacity-50"
+                  >
+                    <span>Notifications</span>
+                    <span className={`text-xs font-semibold ${pushState === 'on' ? 'text-green-600' : 'text-gray-400'}`}>
+                      {pushState === 'on' ? 'On' : pushState === 'busy' ? '…' : 'Off'}
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => { setAccountMenuOpen(false); signOut(); }}
                   className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-navy)] font-medium border-t"
