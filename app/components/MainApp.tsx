@@ -95,16 +95,21 @@ export default function MainApp() {
     if (!user) return;
     try {
       // Profiles swiped on within the last 30 days are excluded — anything
-      // older falls back into the deck (the "reset").
+      // older falls back into the deck (the "reset"). Blocks (in either
+      // direction) are excluded permanently.
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const [likedRes, passedRes] = await Promise.all([
+      const [likedRes, passedRes, blocksRes] = await Promise.all([
         supabase.from('likes').select('liked_id').eq('liker_id', user.id).gte('created_at', cutoff),
         supabase.from('passes').select('passed_id').eq('passer_id', user.id).gte('created_at', cutoff),
+        supabase.from('blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
       ]);
 
       const excludedIds = new Set<string>([
         ...((likedRes.data || []).map((r: any) => r.liked_id)),
         ...((passedRes.data || []).map((r: any) => r.passed_id)),
+        ...((blocksRes.data || []).map((r: any) =>
+          r.blocker_id === user.id ? r.blocked_id : r.blocker_id
+        )),
       ]);
 
       let query = supabase

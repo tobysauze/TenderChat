@@ -79,6 +79,7 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
   const [matchId, setMatchId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -214,24 +215,16 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
     };
   }, [matchId]);
 
-  const handleUnmatch = async () => {
-    if (!matchId || !currentUser) return;
-    setMenuOpen(false);
-    const confirmed = window.confirm(
-      `Unmatch ${matchedProfile.name}? Your conversation will be permanently deleted.`
-    );
-    if (!confirmed) return;
-
-    const { error: matchErr } = await supabase
-      .from('matches')
-      .delete()
-      .eq('id', matchId);
-    if (matchErr) {
-      alert('Could not unmatch: ' + matchErr.message);
-      return;
+  // Shared cleanup used by unmatch / block / report. Removes the match
+  // (cascades messages) and clears mutual likes so they don't auto-rematch.
+  const tearDownMatch = async () => {
+    if (matchId) {
+      const { error } = await supabase.from('matches').delete().eq('id', matchId);
+      if (error) {
+        alert('Could not remove match: ' + error.message);
+        return false;
+      }
     }
-
-    // Clear underlying likes so they need to mutually like again to rematch.
     await supabase
       .from('likes')
       .delete()
@@ -239,7 +232,62 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
         `and(liker_id.eq.${currentUser.id},liked_id.eq.${matchedProfile.user_id}),` +
         `and(liker_id.eq.${matchedProfile.user_id},liked_id.eq.${currentUser.id})`
       );
+    return true;
+  };
 
+  const handleUnmatch = async () => {
+    if (!matchId || !currentUser) return;
+    setMenuOpen(false);
+    const confirmed = window.confirm(
+      `Unmatch ${matchedProfile.name}? Your conversation will be permanently deleted.`
+    );
+    if (!confirmed) return;
+    if (!(await tearDownMatch())) return;
+    onUnmatch?.(matchedProfile.user_id);
+    onClose();
+  };
+
+  const handleBlock = async () => {
+    if (!currentUser) return;
+    setMenuOpen(false);
+    const confirmed = window.confirm(
+      `Block ${matchedProfile.name}? You won't see each other again, your conversation will be deleted, and they can't match with you.`
+    );
+    if (!confirmed) return;
+
+    const { error: blockErr } = await supabase
+      .from('blocks')
+      .insert({ blocker_id: currentUser.id, blocked_id: matchedProfile.user_id });
+    if (blockErr) {
+      alert('Could not block: ' + blockErr.message);
+      return;
+    }
+    await tearDownMatch();
+    onUnmatch?.(matchedProfile.user_id);
+    onClose();
+  };
+
+  const submitReport = async (reason: string, details: string) => {
+    if (!currentUser) return;
+    const { error: reportErr } = await supabase
+      .from('reports')
+      .insert({
+        reporter_id: currentUser.id,
+        reported_id: matchedProfile.user_id,
+        reason,
+        details: details.trim() || null,
+      });
+    if (reportErr) {
+      alert('Could not submit report: ' + reportErr.message);
+      return;
+    }
+    // Reporting auto-blocks: a user dangerous enough to report shouldn't
+    // be able to keep messaging the reporter.
+    await supabase
+      .from('blocks')
+      .insert({ blocker_id: currentUser.id, blocked_id: matchedProfile.user_id });
+    await tearDownMatch();
+    setReportOpen(false);
     onUnmatch?.(matchedProfile.user_id);
     onClose();
   };
@@ -320,9 +368,23 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
                   <button
                     type="button"
                     onClick={handleUnmatch}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-red)] font-medium text-sm"
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-navy)] font-medium text-sm"
                   >
                     Unmatch
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBlock}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-red)] font-medium text-sm border-t"
+                  >
+                    Block
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setReportOpen(true); }}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-red)] font-medium text-sm border-t"
+                  >
+                    Report
                   </button>
                 </div>
               </>
@@ -422,6 +484,100 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
           onClose={() => setShowProfile(false)}
         />
       )}
+
+      {reportOpen && (
+        <ReportModal
+          name={matchedProfile.name}
+          onCancel={() => setReportOpen(false)}
+          onSubmit={submitReport}
+        />
+      )}
     </div>
   );
-} 
+}
+
+const REPORT_REASONS = [
+  'Inappropriate messages or photos',
+  'Feels like spam or a scam',
+  'Fake profile',
+  'Underage',
+  'Other',
+];
+
+function ReportModal({
+  name,
+  onCancel,
+  onSubmit,
+}: {
+  name: string;
+  onCancel: () => void;
+  onSubmit: (reason: string, details: string) => void;
+}) {
+  const [reason, setReason] = useState(REPORT_REASONS[0]);
+  const [details, setDetails] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60]"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <h3 className="text-lg font-bold text-[var(--tender-navy)] mb-1">Report {name}</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Reports are reviewed by the Tender team. {name} will also be blocked.
+        </p>
+
+        <div className="space-y-2 mb-4">
+          {REPORT_REASONS.map(r => (
+            <label key={r} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="radio"
+                name="report-reason"
+                checked={reason === r}
+                onChange={() => setReason(r)}
+                className="accent-[var(--tender-red)]"
+              />
+              <span className="text-sm text-[var(--tender-navy)]">{r}</span>
+            </label>
+          ))}
+        </div>
+
+        <textarea
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Anything else we should know? (optional)"
+          rows={3}
+          className="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--tender-red)]/30 resize-none"
+          style={{ fontSize: '16px' }}
+        />
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={submitting}
+            className="px-4 py-2 rounded-full text-[var(--tender-navy)] font-medium hover:bg-gray-100 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              setSubmitting(true);
+              try {
+                await onSubmit(reason, details);
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            disabled={submitting}
+            className="px-4 py-2 rounded-full bg-[var(--tender-red)] text-white font-semibold hover:opacity-90 disabled:opacity-50"
+          >
+            {submitting ? 'Submitting…' : 'Submit report'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
