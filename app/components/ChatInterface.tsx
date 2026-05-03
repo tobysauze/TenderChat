@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeftIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
 import ProfileView from './ProfileView';
@@ -15,6 +15,7 @@ interface ChatInterfaceProps {
   matchedProfile: CrewProfile;
   currentUser: any; // Accept any user type for now
   onClose: () => void;
+  onUnmatch?: (matchedUserId: string) => void;
 }
 
 // Automated responses based on role
@@ -70,12 +71,13 @@ const getAutomatedResponses = (role: string): string[] => {
   return [...commonResponses, ...specificResponses];
 };
 
-export default function ChatInterface({ matchedProfile, currentUser, onClose }: ChatInterfaceProps) {
+export default function ChatInterface({ matchedProfile, currentUser, onClose, onUnmatch }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -211,6 +213,36 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
     };
   }, [matchId]);
 
+  const handleUnmatch = async () => {
+    if (!matchId || !currentUser) return;
+    setMenuOpen(false);
+    const confirmed = window.confirm(
+      `Unmatch ${matchedProfile.name}? Your conversation will be permanently deleted.`
+    );
+    if (!confirmed) return;
+
+    const { error: matchErr } = await supabase
+      .from('matches')
+      .delete()
+      .eq('id', matchId);
+    if (matchErr) {
+      alert('Could not unmatch: ' + matchErr.message);
+      return;
+    }
+
+    // Clear underlying likes so they need to mutually like again to rematch.
+    await supabase
+      .from('likes')
+      .delete()
+      .or(
+        `and(liker_id.eq.${currentUser.id},liked_id.eq.${matchedProfile.user_id}),` +
+        `and(liker_id.eq.${matchedProfile.user_id},liked_id.eq.${currentUser.id})`
+      );
+
+    onUnmatch?.(matchedProfile.user_id);
+    onClose();
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !matchId || !currentUser) return;
 
@@ -264,6 +296,30 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
               <p className="text-xs text-gray-500 truncate">{matchedProfile.role} · Tap to view profile</p>
             </div>
           </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(o => !o)}
+              className="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+              aria-label="Chat options"
+            >
+              <EllipsisVerticalIcon className="w-5 h-5" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border z-20 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={handleUnmatch}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 text-[var(--tender-red)] font-medium text-sm"
+                  >
+                    Unmatch
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Messages */}

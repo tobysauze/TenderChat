@@ -583,6 +583,9 @@ export default function MainApp() {
           matchedProfile={selectedMatch}
           currentUser={user}
           onClose={() => setSelectedMatch(null)}
+          onUnmatch={(userId) =>
+            setMatches(prev => prev.filter(m => m.user_id !== userId))
+          }
         />
       )}
 
