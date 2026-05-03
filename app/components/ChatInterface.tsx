@@ -179,39 +179,8 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
         console.log('Subscription status:', status);
       });
 
-    // Fallback: Poll for new messages every 2 seconds if real-time fails
-    const pollInterval = setInterval(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('created_at', { ascending: true });
-
-        if (error) throw error;
-
-        const formattedMessages: Message[] = data?.map(msg => ({
-          id: msg.id,
-          senderId: msg.sender_id,
-          text: msg.content,
-          timestamp: new Date(msg.created_at),
-        })) || [];
-
-        setMessages(prev => {
-          // Only update if we have new messages
-          if (formattedMessages.length > prev.length) {
-            return formattedMessages;
-          }
-          return prev;
-        });
-      } catch (error) {
-        console.error('Error polling messages:', error);
-      }
-    }, 2000);
-
     return () => {
       subscription.unsubscribe();
-      clearInterval(pollInterval);
     };
   }, [matchId]);
 

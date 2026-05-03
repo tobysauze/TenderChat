@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface AuthModalProps {
@@ -11,8 +12,11 @@ interface AuthModalProps {
   onModeChange: (mode: 'signin' | 'signup') => void;
 }
 
+type View = 'auth' | 'reset-request' | 'reset-sent';
+
 export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProps) {
   const { signIn, signUp } = useAuth();
+  const [view, setView] = useState<View>('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -45,15 +49,42 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
     }
   };
 
+  const handlePasswordResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset/`,
+      });
+      if (error) throw error;
+      setView('reset-sent');
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToAuth = () => {
+    setView('auth');
+    setError('');
+  };
+
   if (!isOpen) return null;
+
+  const headerTitle =
+    view === 'reset-request' || view === 'reset-sent'
+      ? 'Reset password'
+      : mode === 'signup'
+      ? 'Join Tender'
+      : 'Welcome Back';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-[var(--tender-navy)]">
-            {mode === 'signup' ? 'Join Tender' : 'Welcome Back'}
-          </h2>
+          <h2 className="text-2xl font-bold text-[var(--tender-navy)]">{headerTitle}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full"
@@ -67,6 +98,58 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
             {error}
           </div>
         )}
+
+        {view === 'reset-sent' && (
+          <>
+            <p className="text-[var(--tender-navy)] mb-2">Check your inbox</p>
+            <p className="text-sm text-gray-600 mb-6">
+              We sent a password-reset link to <strong>{email}</strong>. Open it on the same
+              device you want to sign in on.
+            </p>
+            <button
+              type="button"
+              onClick={goToAuth}
+              className="w-full bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90"
+            >
+              Back to sign in
+            </button>
+          </>
+        )}
+
+        {view === 'reset-request' && (
+          <form onSubmit={handlePasswordResetRequest} className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Enter your email and we'll send a link to reset your password.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90 disabled:opacity-50"
+            >
+              {loading ? 'Sending…' : 'Send reset link'}
+            </button>
+            <button
+              type="button"
+              onClick={goToAuth}
+              className="w-full text-[var(--tender-blue)] hover:underline text-sm"
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
+
+        {view === 'auth' && (
+        <>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
@@ -147,17 +230,30 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
           </button>
         </form>
 
+        {mode === 'signin' && (
+          <div className="mt-3 text-center">
+            <button
+              onClick={() => { setView('reset-request'); setError(''); }}
+              className="text-sm text-gray-500 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 text-center">
           <button
             onClick={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
             className="text-[var(--tender-blue)] hover:underline"
           >
-            {mode === 'signin' 
-              ? "Don't have an account? Sign up" 
+            {mode === 'signin'
+              ? "Don't have an account? Sign up"
               : "Already have an account? Sign in"
             }
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
