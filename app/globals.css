@@ -15,15 +15,16 @@ body {
 /* Card animations */
 .card-container {
   @apply relative w-full;
-  height: 600px;
+  height: min(600px, calc(100vh - 220px));
 }
 
 .card {
-  @apply w-full h-[600px] rounded-3xl overflow-hidden shadow-xl;
+  @apply w-full rounded-3xl overflow-hidden shadow-xl;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  height: 100%;
   will-change: transform;
 }
 

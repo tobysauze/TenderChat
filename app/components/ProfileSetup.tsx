@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isDemoMode } from '../../lib/supabase';
+import PhotoUpload, { Photo } from './PhotoUpload';
 
 interface ProfileSetupProps {
   onComplete: () => void;
@@ -12,7 +13,9 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+
   // Profile data
   const [profileData, setProfileData] = useState({
     name: '',
@@ -47,13 +50,22 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     }));
   };
 
-  const handleSubmit = async () => {
+  const refreshPhotos = async () => {
+    if (!profileId) return;
+    const { data } = await supabase
+      .from('photos')
+      .select('id, url, order')
+      .eq('profile_id', profileId)
+      .order('order', { ascending: true });
+    setPhotos(data || []);
+  };
+
+  const handleSaveProfile = async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       if (isDemoMode) {
-        // Demo mode - save to localStorage
         const demoProfile = {
           id: 'demo-profile-' + Date.now(),
           user_id: user.id,
@@ -61,21 +73,20 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
           created_at: new Date().toISOString(),
         };
         localStorage.setItem('demo-profile', JSON.stringify(demoProfile));
-        onComplete();
+        setProfileId(demoProfile.id);
+        setStep(4);
         return;
       }
 
-      // Real Supabase mode
-      const { error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .insert({
-          user_id: user.id,
-          ...profileData,
-        });
+        .upsert({ user_id: user.id, ...profileData }, { onConflict: 'user_id' })
+        .select('id')
+        .single();
 
-      if (profileError) throw profileError;
-
-      onComplete();
+      if (error) throw error;
+      if (data) setProfileId(data.id);
+      setStep(4);
     } catch (error) {
       console.error('Error creating profile:', error);
     } finally {
@@ -87,7 +98,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Complete Your Profile</h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -169,7 +180,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Add Your Skills</h2>
-        
+
         <div className="space-y-6">
           {/* Languages */}
           <div>
@@ -301,48 +312,82 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     );
   }
 
+  if (step === 3) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Tell Us About Yourself</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea
+              value={profileData.bio}
+              onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+              rows={4}
+              placeholder="Tell us about yourself, your experience, and what you're looking for..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+            <input
+              type="text"
+              value={profileData.availability}
+              onChange={(e) => setProfileData(prev => ({ ...prev, availability: e.target.value }))}
+              placeholder="e.g., Available immediately, Available from June 2024"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => setStep(2)}
+              className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleSaveProfile}
+              disabled={loading}
+              className="flex-1 bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90 disabled:opacity-50"
+            >
+              {loading ? 'Saving…' : 'Continue'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 4: photos
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Tell Us About Yourself</h2>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-          <textarea
-            value={profileData.bio}
-            onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-            rows={4}
-            placeholder="Tell us about yourself, your experience, and what you're looking for..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-          />
-        </div>
+      <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-2">Add Some Photos</h2>
+      <p className="text-gray-600 mb-6">Profiles with photos get a lot more matches. Add at least one to finish setup.</p>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
-          <input
-            type="text"
-            value={profileData.availability}
-            onChange={(e) => setProfileData(prev => ({ ...prev, availability: e.target.value }))}
-            placeholder="e.g., Available immediately, Available from June 2024"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-          />
-        </div>
+      {profileId && user && (
+        <PhotoUpload
+          userId={user.id}
+          profileId={profileId}
+          photos={photos}
+          onChange={refreshPhotos}
+        />
+      )}
 
-        <div className="flex gap-4">
-          <button
-            onClick={() => setStep(2)}
-            className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400"
-          >
-            Back
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90 disabled:opacity-50"
-          >
-            {loading ? 'Creating Profile...' : 'Complete Profile'}
-          </button>
-        </div>
+      <div className="flex gap-4 mt-8">
+        <button
+          onClick={() => setStep(3)}
+          className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-400"
+        >
+          Back
+        </button>
+        <button
+          onClick={onComplete}
+          className="flex-1 bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90"
+        >
+          {photos.length === 0 ? 'Skip for now' : 'Finish'}
+        </button>
       </div>
     </div>
   );

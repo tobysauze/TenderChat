@@ -12,4 +12,5 @@ export interface CrewProfile {
   interests?: string[];
   bio?: string;
   availability?: string;
-} 
+  photos?: { url: string; order: number }[];
+}
