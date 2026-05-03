@@ -565,8 +565,13 @@ export default function MainApp() {
 
   return (
     <main className="h-[100dvh] flex flex-col overflow-hidden">
-      {/* Top Bar */}
-      <div className="h-16 sm:h-20 bg-white flex items-center justify-between px-4 sm:px-6 border-b shrink-0">
+      {/* Top Bar — outer wrapper handles iOS PWA safe-area-inset-top so the
+          logo/cog sit below the status bar when installed to the home screen. */}
+      <div
+        className="bg-white border-b shrink-0"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+      <div className="h-16 sm:h-20 flex items-center justify-between px-4 sm:px-6">
         <img src="/tender-logo.svg" alt="Tender" className="h-12 sm:h-16" />
 
         <div className="relative">
@@ -627,6 +632,7 @@ export default function MainApp() {
           )}
         </div>
       </div>
+      </div>
 
       {/* Body */}
       <div className="flex-1 flex min-h-0">
@@ -648,21 +654,27 @@ export default function MainApp() {
         </div>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden bg-white border-t flex items-center justify-around h-16 shrink-0">
-        <TabButton
-          active={tab === 'discover'}
-          onClick={() => setTab('discover')}
-          icon={<FireIcon className="w-6 h-6" />}
-          label="Discover"
-        />
-        <TabButton
-          active={tab === 'matches'}
-          onClick={() => setTab('matches')}
-          icon={<ChatBubbleLeftRightIcon className="w-6 h-6" />}
-          label="Matches"
-          badge={matches.length}
-        />
+      {/* Mobile bottom nav — outer wrapper handles iOS PWA safe-area-inset-bottom
+          so tab labels don't overlap the home indicator. */}
+      <nav
+        className="md:hidden bg-white border-t shrink-0"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex items-center justify-around h-16">
+          <TabButton
+            active={tab === 'discover'}
+            onClick={() => setTab('discover')}
+            icon={<FireIcon className="w-6 h-6" />}
+            label="Discover"
+          />
+          <TabButton
+            active={tab === 'matches'}
+            onClick={() => setTab('matches')}
+            icon={<ChatBubbleLeftRightIcon className="w-6 h-6" />}
+            label="Matches"
+            badge={matches.length}
+          />
+        </div>
       </nav>
 
       {/* Chat */}

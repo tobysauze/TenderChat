@@ -321,8 +321,12 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl shadow-2xl h-[100dvh] sm:h-auto sm:max-h-[80vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="px-3 py-3 border-b flex items-center bg-white shrink-0">
+        {/* Header — adds safe-area-inset-top so the back button clears the
+            iOS status bar in PWA standalone mode. */}
+        <div
+          className="px-3 py-3 border-b flex items-center bg-white shrink-0"
+          style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
+        >
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full mr-1 text-gray-500"
