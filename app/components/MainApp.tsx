@@ -550,7 +550,7 @@ export default function MainApp() {
         {/* Main content area */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Mobile: show selected tab panel */}
-          <div className="flex-1 md:hidden min-h-0">
+          <div className="flex-1 md:hidden min-h-0 flex flex-col">
             {tab === 'discover' ? discoverPanel : matchesPanel}
           </div>
           {/* Desktop: always discover */}
