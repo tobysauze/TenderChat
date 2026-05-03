@@ -132,13 +132,17 @@ export default function MainApp() {
     if (!user) return;
     try {
       // Profiles swiped on within the last 30 days are excluded — anything
-      // older falls back into the deck (the "reset"). Blocks (in either
-      // direction) are excluded permanently.
+      // older falls back into the deck (the "reset"). Blocks and existing
+      // matches (in either direction) are excluded permanently. Matches are
+      // included explicitly because the user who *received* the like and
+      // closed the loop never inserts their own like row, so liking alone
+      // isn't enough to keep matched users out of their deck.
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const [likedRes, passedRes, blocksRes] = await Promise.all([
+      const [likedRes, passedRes, blocksRes, matchesRes] = await Promise.all([
         supabase.from('likes').select('liked_id').eq('liker_id', user.id).gte('created_at', cutoff),
         supabase.from('passes').select('passed_id').eq('passer_id', user.id).gte('created_at', cutoff),
         supabase.from('blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+        supabase.from('matches').select('user1_id, user2_id').or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`),
       ]);
 
       const excludedIds = new Set<string>([
@@ -146,6 +150,9 @@ export default function MainApp() {
         ...((passedRes.data || []).map((r: any) => r.passed_id)),
         ...((blocksRes.data || []).map((r: any) =>
           r.blocker_id === user.id ? r.blocked_id : r.blocker_id
+        )),
+        ...((matchesRes.data || []).map((r: any) =>
+          r.user1_id === user.id ? r.user2_id : r.user1_id
         )),
       ]);
 
@@ -214,8 +221,9 @@ export default function MainApp() {
       .from('matches')
       .select('*')
       .or(`and(user1_id.eq.${target.user_id},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${target.user_id})`)
-      .single();
-    if (checkError && checkError.code !== 'PGRST116') {
+      .limit(1)
+      .maybeSingle();
+    if (checkError) {
       console.error('Error checking for existing match:', checkError);
     }
 
@@ -226,8 +234,12 @@ export default function MainApp() {
     });
 
     if (existingMatch) {
+      // Re-swiping on someone we're already matched with. Don't duplicate
+      // the row in matches state — they're already there from loadMatches.
       const formatted = formatMatch();
-      setMatches(prev => [...prev, formatted]);
+      setMatches(prev =>
+        prev.some(m => m.user_id === target.user_id) ? prev : [...prev, formatted]
+      );
       setMatchAlertProfile(formatted);
       setShowMatchAlert(true);
       setTimeout(() => setShowMatchAlert(false), 1000);
@@ -239,8 +251,9 @@ export default function MainApp() {
       .select('*')
       .eq('liker_id', target.user_id)
       .eq('liked_id', user.id)
-      .single();
-    if (likeError && likeError.code !== 'PGRST116') {
+      .limit(1)
+      .maybeSingle();
+    if (likeError) {
       console.error('Error checking for existing like:', likeError);
     }
 
@@ -249,8 +262,17 @@ export default function MainApp() {
         .from('matches')
         .insert({ user1_id: user.id, user2_id: target.user_id });
       if (!matchError) {
+        // Insert our own like row so this user is excluded from our deck
+        // by the standard likes filter on next reload (they wouldn't be
+        // otherwise — only the *first* liker has a likes row).
+        await supabase
+          .from('likes')
+          .insert({ liker_id: user.id, liked_id: target.user_id });
+
         const formatted = formatMatch();
-        setMatches(prev => [...prev, formatted]);
+        setMatches(prev =>
+          prev.some(m => m.user_id === target.user_id) ? prev : [...prev, formatted]
+        );
         setMatchAlertProfile(formatted);
         setShowMatchAlert(true);
         setTimeout(() => setShowMatchAlert(false), 1000);
