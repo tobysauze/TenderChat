@@ -488,7 +488,7 @@ export default function MainApp() {
   );
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main className="h-[100dvh] flex flex-col overflow-hidden">
       {/* Top Bar */}
       <div className="h-16 sm:h-20 bg-white flex items-center justify-between px-4 sm:px-6 border-b shrink-0">
         <img src="/tender-logo.svg" alt="Tender" className="h-12 sm:h-16" />
