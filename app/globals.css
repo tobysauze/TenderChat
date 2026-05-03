@@ -15,10 +15,11 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* Card animations */
+/* Card animations — fills its parent. The parent (in MainApp) controls
+   the actual height (full available height on mobile, fixed 600px on desktop). */
 .card-container {
-  @apply relative w-full;
-  height: min(600px, calc(100vh - 220px));
+  @apply relative w-full h-full;
+  min-height: 0;
 }
 
 .card {

@@ -45,6 +45,7 @@ export default function MainApp() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('discover');
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
+  const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
 
   const [myCompletion, setMyCompletion] = useState<{ percent: number; missing: string[] } | null>(null);
 
@@ -264,6 +265,19 @@ export default function MainApp() {
   const thirdProfile = profiles[currentProfileIndex + 2];
   const noMoreProfiles = !loading && currentProfileIndex >= profiles.length;
 
+  const currentPhotos = currentProfile
+    ? currentProfile.photos.slice().sort((a, b) => a.order - b.order)
+    : [];
+  const totalCurrentPhotos = currentPhotos.length;
+
+  // Reset to first photo whenever the visible profile changes.
+  useEffect(() => {
+    setCurrentPhotoIdx(0);
+  }, [currentProfile?.id]);
+
+  const goPrevPhoto = () => setCurrentPhotoIdx(i => Math.max(0, i - 1));
+  const goNextPhoto = () => setCurrentPhotoIdx(i => Math.min(totalCurrentPhotos - 1, i + 1));
+
   if (showSettings) {
     return (
       <ProfileSettings
@@ -326,78 +340,150 @@ export default function MainApp() {
     </div>
   );
 
-  const discoverPanel = (
-    <div className="flex-1 p-4 sm:p-8 flex items-center justify-center bg-gray-50 min-h-0">
-      <div className="max-w-md w-full">
-        {currentProfile && !noMoreProfiles && (
-          <>
-            <div className="card-container">
-              {thirdProfile && (
-                <div className="card card-third">
-                  <ProfilePhoto profile={thirdProfile} />
-                  <ProfileOverlay profile={thirdProfile} />
-                </div>
-              )}
-              {nextProfile && (
-                <div className="card card-next">
-                  <ProfilePhoto profile={nextProfile} />
-                  <ProfileOverlay profile={nextProfile} />
-                </div>
-              )}
-              <div
-                ref={cardRef}
-                className={`card card-current ${swipeDirection ? `swipe-${swipeDirection}` : ''} ${isDragging ? 'dragging' : ''}`}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onMouseDown={handleMouseDown}
-                style={{
-                  transform: swipeDirection
-                    ? undefined
-                    : `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
-                  transition: swipeDirection ? 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : 'none',
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                  userSelect: 'none',
-                }}
-              >
-                <div className="like-indicator">LIKE</div>
-                <div className="dislike-indicator">NOPE</div>
-                <ProfilePhoto profile={currentProfile} />
-                <ProfileOverlay
-                  profile={currentProfile}
-                  onInfo={() => setViewingProfile(currentProfile)}
-                />
-              </div>
-            </div>
+  const swipeActionRow = (
+    <div className="flex justify-center items-center gap-4">
+      <button
+        onClick={() => handleSwipe('left')}
+        className="action-button bg-white"
+        disabled={swipeDirection !== null}
+        aria-label="Pass"
+      >
+        <XMarkIcon className="w-8 h-8 text-[var(--tender-navy)]" />
+      </button>
+      <button
+        onClick={() => handleSwipe('right')}
+        className="action-button-large bg-[var(--tender-red)]"
+        disabled={swipeDirection !== null}
+        aria-label="Like"
+      >
+        <HeartIcon className="w-10 h-10 text-white" />
+      </button>
+    </div>
+  );
 
-            <div className="action-buttons">
-              <button onClick={() => handleSwipe('left')} className="action-button bg-white" disabled={swipeDirection !== null}>
-                <XMarkIcon className="w-8 h-8 text-[var(--tender-navy)]" />
-              </button>
-              <button onClick={() => handleSwipe('right')} className="action-button-large bg-[var(--tender-red)]" disabled={swipeDirection !== null}>
-                <HeartIcon className="w-10 h-10 text-white" />
-              </button>
-            </div>
+  const cardStack = currentProfile && !noMoreProfiles ? (
+    <div className="card-container">
+      {thirdProfile && (
+        <div className="card card-third">
+          <ProfilePhoto profile={thirdProfile} />
+          <ProfileOverlay profile={thirdProfile} />
+        </div>
+      )}
+      {nextProfile && (
+        <div className="card card-next">
+          <ProfilePhoto profile={nextProfile} />
+          <ProfileOverlay profile={nextProfile} />
+        </div>
+      )}
+      <div
+        ref={cardRef}
+        className={`card card-current ${swipeDirection ? `swipe-${swipeDirection}` : ''} ${isDragging ? 'dragging' : ''}`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        style={{
+          transform: swipeDirection
+            ? undefined
+            : `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${rotation}deg)`,
+          transition: swipeDirection ? 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : 'none',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+        }}
+      >
+        <div className="like-indicator">LIKE</div>
+        <div className="dislike-indicator">NOPE</div>
+        <ProfilePhoto profile={currentProfile} photoIdx={currentPhotoIdx} />
+
+        {/* Photo progress segments */}
+        {totalCurrentPhotos > 1 && (
+          <div className="absolute top-2 left-2 right-2 flex gap-1 z-20 pointer-events-none">
+            {currentPhotos.map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-1 rounded-full ${i === currentPhotoIdx ? 'bg-white' : 'bg-white/40'}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Tap zones for cycling photos. Cover the upper 2/3 of the card so
+            the bottom info area + (i) button stay clickable. We don't stop
+            propagation on touch-/mouse-start so swipe-drag still works when
+            the user drags rather than taps. */}
+        {totalCurrentPhotos > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goPrevPhoto(); }}
+              className="absolute left-0 top-0 bottom-1/3 w-1/2 z-10"
+              aria-label="Previous photo"
+            />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); goNextPhoto(); }}
+              className="absolute right-0 top-0 bottom-1/3 w-1/2 z-10"
+              aria-label="Next photo"
+            />
           </>
         )}
 
-        {noMoreProfiles && (
-          <EmptyState
-            icon={<FireIcon className="w-10 h-10 text-[var(--tender-red)]" />}
-            title="You're all caught up"
-            body="You've seen everyone available right now. Check back later — new crew sign up every day."
-            action={profiles.length > 0 ? { label: 'Swipe again', onClick: () => setCurrentProfileIndex(0) } : undefined}
-          />
-        )}
-
-        {!loading && profiles.length === 0 && (
-          <EmptyState
-            icon={<FireIcon className="w-10 h-10 text-[var(--tender-red)]" />}
-            title="No crew to show yet"
-            body="You're early! Invite some friends in yachting and they'll show up here when they sign up."
-          />
-        )}
+        <ProfileOverlay
+          profile={currentProfile}
+          onInfo={() => setViewingProfile(currentProfile)}
+        />
       </div>
+    </div>
+  ) : null;
+
+  const discoverPanel = (
+    <div className="flex-1 flex flex-col bg-gray-50 min-h-0">
+      {/* Card area — fills available space on mobile, centered max-width on desktop */}
+      <div className="flex-1 flex md:items-center md:justify-center md:p-8 min-h-0">
+        <div className="w-full h-full md:h-auto md:max-w-md flex flex-col px-3 pt-3 md:p-0 min-h-0">
+          {cardStack && (
+            <>
+              {/* On mobile the card stretches; on desktop it's a fixed 600px tall */}
+              <div className="flex-1 md:flex-initial md:h-[600px] min-h-0">
+                {cardStack}
+              </div>
+              {/* Desktop: action buttons live just under the card */}
+              <div className="hidden md:block mt-6">
+                {swipeActionRow}
+              </div>
+            </>
+          )}
+
+          {noMoreProfiles && (
+            <div className="md:mt-0 m-auto">
+              <EmptyState
+                icon={<FireIcon className="w-10 h-10 text-[var(--tender-red)]" />}
+                title="You're all caught up"
+                body="You've seen everyone available right now. Check back later — new crew sign up every day."
+                action={profiles.length > 0 ? { label: 'Swipe again', onClick: () => setCurrentProfileIndex(0) } : undefined}
+              />
+            </div>
+          )}
+
+          {!loading && profiles.length === 0 && (
+            <div className="m-auto">
+              <EmptyState
+                icon={<FireIcon className="w-10 h-10 text-[var(--tender-red)]" />}
+                title="No crew to show yet"
+                body="You're early! Invite some friends in yachting and they'll show up here when they sign up."
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile: action buttons fixed in the bottom of the discover area,
+          just above the Discover/Matches tab bar — Tinder-style. */}
+      {cardStack && (
+        <div className="md:hidden shrink-0 px-4 pt-2 pb-3 bg-gray-50">
+          {swipeActionRow}
+        </div>
+      )}
     </div>
   );
 
@@ -532,10 +618,11 @@ export default function MainApp() {
   );
 }
 
-function ProfilePhoto({ profile }: { profile: Profile }) {
-  const url = profile.photos[0]?.url;
+function ProfilePhoto({ profile, photoIdx = 0 }: { profile: Profile; photoIdx?: number }) {
+  const sorted = profile.photos.slice().sort((a, b) => a.order - b.order);
+  const url = sorted[photoIdx]?.url || sorted[0]?.url;
   if (url) {
-    return <img src={url} alt={profile.name} className="w-full h-full object-cover" />;
+    return <img src={url} alt={profile.name} className="w-full h-full object-cover" draggable={false} />;
   }
   return (
     <div className="w-full h-full bg-gradient-to-br from-[var(--tender-blue)]/30 to-[var(--tender-navy)]/30 flex items-center justify-center">
