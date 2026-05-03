@@ -625,8 +625,8 @@ function ProfilePhoto({ profile, photoIdx = 0 }: { profile: Profile; photoIdx?: 
     return <img src={url} alt={profile.name} className="w-full h-full object-cover" draggable={false} />;
   }
   return (
-    <div className="w-full h-full bg-gradient-to-br from-[var(--tender-blue)]/30 to-[var(--tender-navy)]/30 flex items-center justify-center">
-      <span className="text-7xl font-bold text-[var(--tender-navy)]/40">
+    <div className="w-full h-full bg-gradient-to-br from-[var(--tender-blue)] to-[var(--tender-navy)] flex items-center justify-center">
+      <span className="text-7xl font-bold text-white">
         {profile.name?.[0]?.toUpperCase() || '?'}
       </span>
     </div>
