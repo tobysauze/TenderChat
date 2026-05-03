@@ -18,7 +18,7 @@
 
 do $$
 declare
-  target_email constant text := 'TARGET_EMAIL';  -- <-- change this
+  target_email constant text := 'toby.sauze@gmail.com';  -- <-- change this if pairing a different account
 
   target_user_id uuid;
   test_user record;
