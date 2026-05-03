@@ -363,17 +363,10 @@ export default function MainApp() {
                 <div className="like-indicator">LIKE</div>
                 <div className="dislike-indicator">NOPE</div>
                 <ProfilePhoto profile={currentProfile} />
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setViewingProfile(currentProfile); }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 z-10"
-                  aria-label="View full profile"
-                >
-                  <InformationCircleIcon className="w-6 h-6" />
-                </button>
-                <ProfileOverlay profile={currentProfile} />
+                <ProfileOverlay
+                  profile={currentProfile}
+                  onInfo={() => setViewingProfile(currentProfile)}
+                />
               </div>
             </div>
 
@@ -553,23 +546,39 @@ function ProfilePhoto({ profile }: { profile: Profile }) {
   );
 }
 
-function ProfileOverlay({ profile }: { profile: Profile }) {
+function ProfileOverlay({ profile, onInfo }: { profile: Profile; onInfo?: () => void }) {
   return (
     <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[var(--tender-navy)]/90 via-[var(--tender-navy)]/50 to-transparent text-white">
-      <h2 className="text-3xl font-bold">{profile.name}{profile.age ? `, ${profile.age}` : ''}</h2>
-      <p className="text-xl opacity-90 mt-1">{profile.role}</p>
-      {profile.experience && (
-        <p className="text-lg opacity-80 mt-1">{profile.experience} experience</p>
-      )}
-      {profile.certifications?.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {profile.certifications.slice(0, 3).map((cert, i) => (
-            <span key={i} className="px-3 py-1 bg-[var(--tender-blue)]/30 rounded-full text-sm backdrop-blur-sm">
-              {cert}
-            </span>
-          ))}
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-3xl font-bold">{profile.name}{profile.age ? `, ${profile.age}` : ''}</h2>
+          <p className="text-xl opacity-90 mt-1">{profile.role}</p>
+          {profile.experience && (
+            <p className="text-lg opacity-80 mt-1">{profile.experience} experience</p>
+          )}
+          {profile.certifications?.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {profile.certifications.slice(0, 3).map((cert, i) => (
+                <span key={i} className="px-3 py-1 bg-[var(--tender-blue)]/30 rounded-full text-sm backdrop-blur-sm">
+                  {cert}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+        {onInfo && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onInfo(); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="shrink-0 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/30 ring-1 ring-white/30"
+            aria-label="View full profile"
+          >
+            <InformationCircleIcon className="w-6 h-6" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
