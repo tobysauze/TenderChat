@@ -27,6 +27,12 @@ interface Profile {
   photos: { url: string; order: number }[];
   imageUrl: string;
   last_seen?: string | null;
+  match_id?: string;
+}
+
+interface LatestMessage {
+  ts: string;
+  senderId: string;
 }
 
 const PLACEHOLDER_AVATAR = '/tender-logo.svg';
@@ -55,6 +61,13 @@ export default function MainApp() {
   // Push notifications: 'unsupported' | 'off' | 'on' | 'busy'
   const [pushState, setPushState] = useState<'unsupported' | 'off' | 'on' | 'busy'>('unsupported');
 
+  // Per-match latest-message info, used to show "new message" indicators
+  // on the matches grid. Keyed by match_id.
+  const [latestMessages, setLatestMessages] = useState<Record<string, LatestMessage>>({});
+  // Per-match "last opened" timestamps, persisted to localStorage so unread
+  // state survives reloads. Keyed by match_id, value is an ISO string.
+  const [readState, setReadState] = useState<Record<string, string>>({});
+
   // Touch/swipe state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -70,6 +83,104 @@ export default function MainApp() {
       refreshPushState();
     }
   }, [user]);
+
+  // Hydrate read-state from localStorage on user change.
+  useEffect(() => {
+    if (!user) { setReadState({}); return; }
+    try {
+      const raw = localStorage.getItem(`chat-read:${user.id}`);
+      setReadState(raw ? JSON.parse(raw) : {});
+    } catch {
+      setReadState({});
+    }
+  }, [user]);
+
+  // Mark a match as read (call when its chat opens).
+  const markRead = (matchId: string) => {
+    if (!user || !matchId) return;
+    setReadState(prev => {
+      const next = { ...prev, [matchId]: new Date().toISOString() };
+      try {
+        localStorage.setItem(`chat-read:${user.id}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // When the user opens a chat, reset its unread state.
+  useEffect(() => {
+    if (selectedMatch?.match_id) markRead(selectedMatch.match_id);
+  }, [selectedMatch?.match_id]);
+
+  // Fetch latest message per match, plus subscribe to new INSERTs so the
+  // unread indicator updates live. Polling is the safety net while
+  // realtime configuration shakes out (mirrors ChatInterface).
+  useEffect(() => {
+    if (!user || matches.length === 0) {
+      setLatestMessages({});
+      return;
+    }
+    const matchIds = matches.map(m => m.match_id).filter(Boolean) as string[];
+    if (matchIds.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchLatest = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('match_id, created_at, sender_id')
+        .in('match_id', matchIds)
+        .order('created_at', { ascending: false });
+      if (cancelled || !data) return;
+      const next: Record<string, LatestMessage> = {};
+      for (const m of data as any[]) {
+        if (!next[m.match_id]) {
+          next[m.match_id] = { ts: m.created_at, senderId: m.sender_id };
+        }
+      }
+      setLatestMessages(next);
+    };
+
+    fetchLatest();
+    const onFocus = () => fetchLatest();
+    window.addEventListener('focus', onFocus);
+    const poll = setInterval(fetchLatest, 15000);
+
+    const channel = supabase
+      .channel(`user-messages:${user.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+      }, (payload: any) => {
+        const row = payload.new;
+        if (!row || !matchIds.includes(row.match_id)) return;
+        setLatestMessages(prev => ({
+          ...prev,
+          [row.match_id]: { ts: row.created_at, senderId: row.sender_id },
+        }));
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      clearInterval(poll);
+      channel.unsubscribe();
+    };
+  }, [user, matches.map(m => m.match_id).filter(Boolean).join(',')]);
+
+  const isUnread = (matchId?: string): boolean => {
+    if (!matchId || !user) return false;
+    const latest = latestMessages[matchId];
+    if (!latest) return false;
+    if (latest.senderId === user.id) return false;
+    const readAt = readState[matchId];
+    if (!readAt) return true;
+    return new Date(latest.ts).getTime() > new Date(readAt).getTime();
+  };
+
+  const unreadCount = matches.filter(m => isUnread(m.match_id)).length;
 
   const refreshPushState = async () => {
     if (!isPushSupported()) {
@@ -203,8 +314,16 @@ export default function MainApp() {
         .in('user_id', matchedUserIds);
       if (profilesError) throw profilesError;
 
+      // Map other-user-id → match_id so each profile carries its own match_id.
+      const matchByUserId: Record<string, string> = {};
+      matchRows.forEach(m => {
+        const otherId = m.user1_id === user.id ? m.user2_id : m.user1_id;
+        matchByUserId[otherId] = m.id;
+      });
+
       const matchedProfiles = profilesData?.map(profile => ({
         ...profile,
+        match_id: matchByUserId[profile.user_id],
         imageUrl: profile.photos?.[0]?.url || PLACEHOLDER_AVATAR,
         photos: profile.photos?.sort((a: any, b: any) => a.order - b.order) || [],
       })) || [];
@@ -411,27 +530,38 @@ export default function MainApp() {
           />
         ) : (
           <div className="matches-grid">
-            {matches.map(match => (
-              <div
-                key={match.id}
-                className="match-card group"
-                onClick={() => setSelectedMatch(match)}
-              >
-                <div className="match-image">
-                  {match.photos[0]?.url ? (
-                    <img src={match.photos[0].url} alt={match.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-[var(--tender-blue)]/20 flex items-center justify-center text-[var(--tender-navy)] font-semibold text-2xl">
-                      {match.name?.[0]?.toUpperCase() || '?'}
-                    </div>
-                  )}
+            {matches.map(match => {
+              const unread = isUnread(match.match_id);
+              return (
+                <div
+                  key={match.id}
+                  className="match-card group"
+                  onClick={() => setSelectedMatch(match)}
+                >
+                  <div className="match-image relative">
+                    {match.photos[0]?.url ? (
+                      <img src={match.photos[0].url} alt={match.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-[var(--tender-blue)]/20 flex items-center justify-center text-[var(--tender-navy)] font-semibold text-2xl">
+                        {match.name?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    {unread && (
+                      <span
+                        className="absolute top-2 right-2 w-3.5 h-3.5 rounded-full bg-[var(--tender-red)] ring-2 ring-white shadow"
+                        aria-label="Unread message"
+                      />
+                    )}
+                  </div>
+                  <div className="match-info">
+                    <p className={`text-sm truncate ${unread ? 'font-bold' : 'font-semibold'}`}>
+                      {match.name}
+                    </p>
+                    <p className="text-xs truncate">{match.role}</p>
+                  </div>
                 </div>
-                <div className="match-info">
-                  <p className="text-sm font-semibold truncate">{match.name}</p>
-                  <p className="text-xs truncate">{match.role}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -694,7 +824,7 @@ export default function MainApp() {
             onClick={() => setTab('matches')}
             icon={<ChatBubbleLeftRightIcon className="w-6 h-6" />}
             label="Matches"
-            badge={matches.length}
+            badge={unreadCount}
           />
         </div>
       </nav>
