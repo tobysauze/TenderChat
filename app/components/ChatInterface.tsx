@@ -179,8 +179,43 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
         console.log('Subscription status:', status);
       });
 
+    // Polling safety net. Realtime should deliver messages instantly when
+    // the publication + RLS are configured correctly, but if realtime
+    // silently fails (publication missing on the table, RLS evaluation
+    // dropping the broadcast, network issue) we still want messages to
+    // arrive within a few seconds. The fetch is cheap — RLS narrows it
+    // to this match — and the dedupe-by-id keeps state stable when
+    // realtime *is* working.
+    const pollInterval = setInterval(async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('created_at', { ascending: true });
+      if (error || !data) return;
+
+      setMessages(prev => {
+        if (data.length === prev.length) return prev;
+        const byId = new Map(prev.map(m => [m.id, m]));
+        for (const row of data) {
+          if (!byId.has(row.id)) {
+            byId.set(row.id, {
+              id: row.id,
+              senderId: row.sender_id,
+              text: row.content,
+              timestamp: new Date(row.created_at),
+            });
+          }
+        }
+        return Array.from(byId.values()).sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+        );
+      });
+    }, 3000);
+
     return () => {
       subscription.unsubscribe();
+      clearInterval(pollInterval);
     };
   }, [matchId]);
 
