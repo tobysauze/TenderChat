@@ -3,6 +3,7 @@ import { ArrowLeftIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, EllipsisVert
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
 import { formatLastSeen, isOnline } from '../../lib/lastSeen';
+import { track } from '../../lib/observability';
 import ProfileView from './ProfileView';
 
 interface Message {
@@ -318,6 +319,7 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
 
       if (error) throw error;
       if (data) {
+        track('message_sent', { length: messageText.length });
         const sent: Message = {
           id: data.id,
           senderId: data.sender_id,

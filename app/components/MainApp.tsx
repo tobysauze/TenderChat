@@ -10,6 +10,7 @@ import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
 import { formatLastSeen, isOnline } from '../../lib/lastSeen';
 import { isPushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from '../../lib/push';
+import { track } from '../../lib/observability';
 
 interface Profile {
   id: string;
@@ -381,6 +382,7 @@ export default function MainApp() {
         .from('matches')
         .insert({ user1_id: user.id, user2_id: target.user_id });
       if (!matchError) {
+        track('match_created', { target_role: target.role });
         // Insert our own like row so this user is excluded from our deck
         // by the standard likes filter on next reload (they wouldn't be
         // otherwise — only the *first* liker has a likes row).
@@ -418,6 +420,10 @@ export default function MainApp() {
 
     setSwipeDirection(direction);
     const currentProfile = profiles[currentProfileIndex];
+
+    if (currentProfile) {
+      track('swipe', { direction, target_role: currentProfile.role });
+    }
 
     // Run DB work in the background so the UI doesn't wait on the network.
     if (direction === 'right' && currentProfile) {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isDemoMode } from '../../lib/supabase';
+import { initObservability, identifyUser, resetUser } from '../../lib/observability';
 import AuthModal from './AuthModal';
 import ProfileSetup from './ProfileSetup';
 import MainApp from './MainApp';
@@ -13,6 +14,17 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [profileComplete, setProfileComplete] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
+
+  // Boot analytics + error tracking once on mount.
+  useEffect(() => {
+    initObservability();
+  }, []);
+
+  // Tie the current user to PostHog/Sentry sessions, or clear them on signout.
+  useEffect(() => {
+    if (user) identifyUser(user.id, user.email);
+    else resetUser();
+  }, [user]);
 
   // Check if user has a complete profile
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PlusIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import imageCompression from 'browser-image-compression';
 import { supabase } from '../../lib/supabase';
 
 export interface Photo {
@@ -34,19 +35,40 @@ export default function PhotoUpload({ userId, profileId, photos, onChange, maxPh
       setError('Please choose an image file.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5 MB.');
+    // Allow generous originals (up to ~20 MB) since we're going to compress
+    // them client-side before upload anyway. iPhone HEIC/JPEG originals are
+    // routinely 4–8 MB.
+    if (file.size > 20 * 1024 * 1024) {
+      setError('Image must be under 20 MB.');
       return;
     }
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+      // Compress to a max 1600px edge / ~600 KB target so swipe-deck loads
+      // stay snappy on cabin Wi-Fi and Supabase storage stays cheap.
+      let toUpload: File | Blob = file;
+      try {
+        toUpload = await imageCompression(file, {
+          maxSizeMB: 0.6,
+          maxWidthOrHeight: 1600,
+          useWebWorker: true,
+          fileType: 'image/jpeg',
+          initialQuality: 0.82,
+        });
+      } catch (compressionErr) {
+        console.warn('Image compression failed, uploading original:', compressionErr);
+      }
+
+      const path = `${userId}/${crypto.randomUUID()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, { cacheControl: '3600', upsert: false });
+        .upload(path, toUpload, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: 'image/jpeg',
+        });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
@@ -131,7 +153,7 @@ export default function PhotoUpload({ userId, profileId, photos, onChange, maxPh
       </div>
       {uploading && <p className="mt-3 text-sm text-gray-500">Uploading…</p>}
       {error && <p className="mt-3 text-sm text-[var(--tender-red)]">{error}</p>}
-      <p className="mt-3 text-xs text-gray-500">First photo is your main. JPG/PNG up to 5 MB.</p>
+      <p className="mt-3 text-xs text-gray-500">First photo is your main. We'll compress big images for you.</p>
     </div>
   );
 }

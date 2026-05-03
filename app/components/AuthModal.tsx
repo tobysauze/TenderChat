@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { track } from '../../lib/observability';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface AuthModalProps {
@@ -41,10 +42,12 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
           age_confirmed_at: new Date().toISOString(),
         });
         if (error) throw error;
+        track('signup_submitted', { role });
         // Profile will be created after email confirmation
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
+        track('sign_in');
       }
       onClose();
     } catch (error: any) {
