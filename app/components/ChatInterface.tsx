@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
 import ProfileView from './ProfileView';
@@ -225,91 +225,103 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="chat-container w-full max-w-lg flex flex-col">
-        {/* Chat Header */}
-        <div className="px-6 py-4 border-b flex items-center bg-white">
-          <button 
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center p-0 sm:p-4 z-50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl shadow-2xl h-[100dvh] sm:h-auto sm:max-h-[80vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="px-3 py-3 border-b flex items-center bg-white shrink-0">
+          <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full mr-2"
+            className="p-2 hover:bg-gray-100 rounded-full mr-1 text-gray-500"
+            aria-label="Close chat"
           >
-            <XMarkIcon className="w-6 h-6 text-gray-500" />
+            <ArrowLeftIcon className="w-5 h-5" />
           </button>
           <button
             type="button"
             onClick={() => setShowProfile(true)}
-            className="flex items-center hover:opacity-80 text-left"
+            className="flex items-center hover:opacity-80 text-left flex-1 min-w-0"
           >
             <img
               src={matchedProfile.imageUrl}
               alt={matchedProfile.name}
-              className="w-12 h-12 rounded-full object-cover border-2 border-[var(--tender-red)]"
+              className="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--tender-red)]"
             />
-            <div className="ml-3">
-              <h3 className="font-semibold text-lg">{matchedProfile.name}</h3>
-              <p className="text-sm text-gray-500">{matchedProfile.role} · Tap to view profile</p>
+            <div className="ml-3 min-w-0">
+              <h3 className="font-semibold text-base text-[var(--tender-navy)] truncate">{matchedProfile.name}</h3>
+              <p className="text-xs text-gray-500 truncate">{matchedProfile.role} · Tap to view profile</p>
             </div>
           </button>
         </div>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gradient-to-b from-gray-50 to-white">
           {loading ? (
             <div className="flex justify-center items-center h-full">
-              <div className="text-gray-500">Loading messages...</div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--tender-red)]" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="text-gray-500 text-center">
-                <p>Start the conversation!</p>
-                <p className="text-sm mt-1">Send a message to begin chatting.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center px-8">
+              <div className="w-16 h-16 rounded-full bg-[var(--tender-red)]/10 flex items-center justify-center mb-3">
+                <ChatBubbleLeftRightIcon className="w-8 h-8 text-[var(--tender-red)]" />
               </div>
+              <p className="text-[var(--tender-navy)] font-semibold">You matched!</p>
+              <p className="text-sm text-gray-500 mt-1">Send a message to break the ice.</p>
             </div>
           ) : (
-            messages.map(message => (
-              <div 
-                key={message.id}
-                className={`flex ${message.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}
-              >
-                <div 
-                  className={`max-w-[70%] rounded-[20px] px-4 py-3 ${
-                    message.senderId === currentUser.id 
-                      ? 'bg-gradient-to-r from-[#fd267a] to-[#ff6036] text-white' 
-                      : 'bg-white text-gray-900 border'
-                  }`}
+            messages.map((message, i) => {
+              const isMe = message.senderId === currentUser.id;
+              const prev = i > 0 ? messages[i - 1] : null;
+              const next = i < messages.length - 1 ? messages[i + 1] : null;
+              const isFirstInGroup = !prev || prev.senderId !== message.senderId;
+              const isLastInGroup = !next || next.senderId !== message.senderId;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isFirstInGroup ? 'pt-2' : ''}`}
                 >
-                  <p className="text-[15px]">{message.text}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.senderId === currentUser.id 
-                      ? 'text-white/70' 
-                      : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <div
+                    className={`max-w-[78%] px-4 py-2.5 shadow-sm break-words ${
+                      isMe
+                        ? `bg-[var(--tender-red)] text-white ${isLastInGroup ? 'rounded-br-md' : ''} ${isFirstInGroup ? 'rounded-tr-2xl' : 'rounded-tr-md'} rounded-l-2xl`
+                        : `bg-white text-[var(--tender-navy)] border border-gray-100 ${isLastInGroup ? 'rounded-bl-md' : ''} ${isFirstInGroup ? 'rounded-tl-2xl' : 'rounded-tl-md'} rounded-r-2xl`
+                    }`}
+                  >
+                    <p className="text-[15px] leading-snug whitespace-pre-wrap">{message.text}</p>
+                    {isLastInGroup && (
+                      <p className={`text-[10px] mt-1 ${isMe ? 'text-white/70' : 'text-gray-400'}`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input */}
-        <div className="p-4 bg-white border-t">
-          <div className="flex items-center space-x-3">
+        {/* Input */}
+        <div className="p-3 bg-white border-t shrink-0">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-full pl-4 pr-1 py-1 focus-within:ring-2 focus-within:ring-[var(--tender-red)]/30">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type a message..."
-              className="message-input"
+              placeholder="Type a message…"
+              className="flex-1 bg-transparent focus:outline-none text-[15px] text-[var(--tender-navy)] placeholder:text-gray-400 py-2"
             />
             <button
               onClick={handleSendMessage}
-              className="send-button"
               disabled={!newMessage.trim()}
+              className="w-10 h-10 rounded-full bg-[var(--tender-red)] text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-opacity shrink-0"
+              aria-label="Send"
             >
-              <PaperAirplaneIcon className="w-5 h-5" />
+              <PaperAirplaneIcon className="w-5 h-5 -rotate-12" />
             </button>
           </div>
         </div>
