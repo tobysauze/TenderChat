@@ -21,6 +21,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,9 +32,13 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
 
     try {
       if (mode === 'signup') {
+        if (!ageConfirmed) {
+          throw new Error('You need to confirm you are 18 or older to sign up.');
+        }
         const { error } = await signUp(email, password, {
           name,
           role,
+          age_confirmed_at: new Date().toISOString(),
         });
         if (error) throw error;
         // Profile will be created after email confirmation
@@ -221,9 +226,31 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
             />
           </div>
 
+          {mode === 'signup' && (
+            <label className="flex items-start gap-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                className="mt-0.5 accent-[var(--tender-red)]"
+                required
+              />
+              <span>
+                I'm 18 or older and I agree to Tender's{' '}
+                <a href="/legal/terms/" target="_blank" rel="noreferrer" className="text-[var(--tender-red)] underline">
+                  Terms
+                </a>{' '}
+                and{' '}
+                <a href="/legal/privacy/" target="_blank" rel="noreferrer" className="text-[var(--tender-red)] underline">
+                  Privacy Policy
+                </a>.
+              </span>
+            </label>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (mode === 'signup' && !ageConfirmed)}
             className="w-full bg-[var(--tender-red)] text-white py-3 rounded-lg font-semibold hover:bg-[var(--tender-red)]/90 disabled:opacity-50"
           >
             {loading ? 'Loading...' : (mode === 'signup' ? 'Create Account' : 'Sign In')}
