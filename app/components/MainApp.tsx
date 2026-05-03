@@ -144,68 +144,78 @@ export default function MainApp() {
     }
   };
 
-  const handleSwipe = async (direction: 'left' | 'right') => {
+  const recordLikeAndMaybeMatch = async (target: Profile) => {
+    if (!user) return;
+
+    const { data: existingMatch, error: checkError } = await supabase
+      .from('matches')
+      .select('*')
+      .or(`and(user1_id.eq.${target.user_id},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${target.user_id})`)
+      .single();
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking for existing match:', checkError);
+    }
+
+    const formatMatch = () => ({
+      ...target,
+      imageUrl: target.photos?.[0]?.url || PLACEHOLDER_AVATAR,
+      photos: target.photos?.sort((a: any, b: any) => a.order - b.order) || [],
+    });
+
+    if (existingMatch) {
+      const formatted = formatMatch();
+      setMatches(prev => [...prev, formatted]);
+      setMatchAlertProfile(formatted);
+      setShowMatchAlert(true);
+      setTimeout(() => setShowMatchAlert(false), 2000);
+      return;
+    }
+
+    const { data: existingLike, error: likeError } = await supabase
+      .from('likes')
+      .select('*')
+      .eq('liker_id', target.user_id)
+      .eq('liked_id', user.id)
+      .single();
+    if (likeError && likeError.code !== 'PGRST116') {
+      console.error('Error checking for existing like:', likeError);
+    }
+
+    if (existingLike) {
+      const { error: matchError } = await supabase
+        .from('matches')
+        .insert({ user1_id: user.id, user2_id: target.user_id });
+      if (!matchError) {
+        const formatted = formatMatch();
+        setMatches(prev => [...prev, formatted]);
+        setMatchAlertProfile(formatted);
+        setShowMatchAlert(true);
+        setTimeout(() => setShowMatchAlert(false), 2000);
+      }
+    } else {
+      await supabase.from('likes').insert({ liker_id: user.id, liked_id: target.user_id });
+    }
+  };
+
+  const handleSwipe = (direction: 'left' | 'right') => {
     if (swipeDirection !== null || !user) return;
 
     setSwipeDirection(direction);
     const currentProfile = profiles[currentProfileIndex];
 
-    setTimeout(async () => {
-      if (direction === 'right' && currentProfile) {
-        const { data: existingMatch, error: checkError } = await supabase
-          .from('matches')
-          .select('*')
-          .or(`and(user1_id.eq.${currentProfile.user_id},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${currentProfile.user_id})`)
-          .single();
+    // Run DB work in the background so the UI doesn't wait on the network.
+    if (direction === 'right' && currentProfile) {
+      void recordLikeAndMaybeMatch(currentProfile);
+    }
 
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error('Error checking for existing match:', checkError);
-        }
-
-        if (existingMatch) {
-          const formattedProfile = {
-            ...currentProfile,
-            imageUrl: currentProfile.photos?.[0]?.url || PLACEHOLDER_AVATAR,
-            photos: currentProfile.photos?.sort((a: any, b: any) => a.order - b.order) || [],
-          };
-          setMatches(prev => [...prev, formattedProfile]);
-          setMatchAlertProfile(formattedProfile);
-          setShowMatchAlert(true);
-          setTimeout(() => setShowMatchAlert(false), 2000);
-        } else {
-          const { data: existingLike, error: likeError } = await supabase
-            .from('likes')
-            .select('*')
-            .eq('liker_id', currentProfile.user_id)
-            .eq('liked_id', user.id)
-            .single();
-          if (likeError && likeError.code !== 'PGRST116') {
-            console.error('Error checking for existing like:', likeError);
-          }
-
-          if (existingLike) {
-            const { error: matchError } = await supabase
-              .from('matches')
-              .insert({ user1_id: user.id, user2_id: currentProfile.user_id });
-            if (!matchError) {
-              const formattedProfile = {
-                ...currentProfile,
-                imageUrl: currentProfile.photos?.[0]?.url || PLACEHOLDER_AVATAR,
-                photos: currentProfile.photos?.sort((a: any, b: any) => a.order - b.order) || [],
-              };
-              setMatches(prev => [...prev, formattedProfile]);
-              setMatchAlertProfile(formattedProfile);
-              setShowMatchAlert(true);
-              setTimeout(() => setShowMatchAlert(false), 2000);
-            }
-          } else {
-            await supabase.from('likes').insert({ liker_id: user.id, liked_id: currentProfile.user_id });
-          }
-        }
-      }
-
+    // After the CSS swipe animation finishes, advance to the next card and
+    // reset all drag state so the new card doesn't inherit leftover offsets.
+    setTimeout(() => {
       setCurrentProfileIndex(prev => prev + 1);
       setSwipeDirection(null);
+      setDragOffset({ x: 0, y: 0 });
+      setRotation(0);
+      setIsDragging(false);
     }, 500);
   };
 
