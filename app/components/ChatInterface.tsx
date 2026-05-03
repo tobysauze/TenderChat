@@ -77,6 +77,16 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
   const [matchId, setMatchId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // iOS Safari sometimes leaves the input under the keyboard. Wait for the
+  // keyboard animation, then scroll the input + last message into view.
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 300);
+  };
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -308,12 +318,15 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
         <div className="p-3 bg-white border-t shrink-0">
           <div className="flex items-center gap-2 bg-gray-100 rounded-full pl-4 pr-1 py-1 focus-within:ring-2 focus-within:ring-[var(--tender-red)]/30">
             <input
+              ref={inputRef}
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onFocus={handleInputFocus}
               placeholder="Type a message…"
               className="flex-1 bg-transparent focus:outline-none text-[15px] text-[var(--tender-navy)] placeholder:text-gray-400 py-2"
+              style={{ fontSize: '16px' }}
             />
             <button
               onClick={handleSendMessage}

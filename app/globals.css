@@ -8,8 +8,11 @@
   --tender-blue: #A5D8DD;
 }
 
+html,
 body {
   @apply bg-white;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Card animations */
