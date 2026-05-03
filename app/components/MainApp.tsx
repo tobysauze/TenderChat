@@ -92,11 +92,29 @@ export default function MainApp() {
   const loadProfiles = async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
+      // Profiles swiped on within the last 30 days are excluded — anything
+      // older falls back into the deck (the "reset").
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const [likedRes, passedRes] = await Promise.all([
+        supabase.from('likes').select('liked_id').eq('liker_id', user.id).gte('created_at', cutoff),
+        supabase.from('passes').select('passed_id').eq('passer_id', user.id).gte('created_at', cutoff),
+      ]);
+
+      const excludedIds = new Set<string>([
+        ...((likedRes.data || []).map((r: any) => r.liked_id)),
+        ...((passedRes.data || []).map((r: any) => r.passed_id)),
+      ]);
+
+      let query = supabase
         .from('profiles')
         .select('*, photos (url, order)')
-        .neq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .neq('user_id', user.id);
+
+      if (excludedIds.size > 0) {
+        query = query.not('user_id', 'in', `(${Array.from(excludedIds).join(',')})`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -198,6 +216,18 @@ export default function MainApp() {
     }
   };
 
+  const recordPass = async (target: Profile) => {
+    if (!user) return;
+    // upsert on the (passer_id, passed_id) unique key — if the user already
+    // passed before, refresh created_at so the 30-day window restarts.
+    await supabase
+      .from('passes')
+      .upsert(
+        { passer_id: user.id, passed_id: target.user_id, created_at: new Date().toISOString() },
+        { onConflict: 'passer_id,passed_id' }
+      );
+  };
+
   const handleSwipe = (direction: 'left' | 'right') => {
     if (swipeDirection !== null || !user) return;
 
@@ -207,6 +237,8 @@ export default function MainApp() {
     // Run DB work in the background so the UI doesn't wait on the network.
     if (direction === 'right' && currentProfile) {
       void recordLikeAndMaybeMatch(currentProfile);
+    } else if (direction === 'left' && currentProfile) {
+      void recordPass(currentProfile);
     }
 
     // After the CSS swipe animation finishes, advance to the next card and
