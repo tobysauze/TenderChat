@@ -168,7 +168,7 @@ export default function MainApp() {
       setMatches(prev => [...prev, formatted]);
       setMatchAlertProfile(formatted);
       setShowMatchAlert(true);
-      setTimeout(() => setShowMatchAlert(false), 2000);
+      setTimeout(() => setShowMatchAlert(false), 1000);
       return;
     }
 
@@ -191,7 +191,7 @@ export default function MainApp() {
         setMatches(prev => [...prev, formatted]);
         setMatchAlertProfile(formatted);
         setShowMatchAlert(true);
-        setTimeout(() => setShowMatchAlert(false), 2000);
+        setTimeout(() => setShowMatchAlert(false), 1000);
       }
     } else {
       await supabase.from('likes').insert({ liker_id: user.id, liked_id: target.user_id });
