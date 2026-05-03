@@ -24,7 +24,19 @@ interface Profile {
 }
 
 export default function MainApp() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This will permanently remove your profile, photos, matches, and messages. This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    const { error } = await deleteAccount();
+    if (error) {
+      alert('Could not delete account: ' + error.message);
+    }
+  };
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<Profile[]>([]);
@@ -272,12 +284,20 @@ export default function MainApp() {
       {/* Top Bar */}
       <div className="h-24 bg-white flex items-center justify-between px-6 border-b">
         <img src="/tender-logo.svg" alt="Tender" className="h-20" />
-        <button
-          onClick={signOut}
-          className="text-[var(--tender-navy)] hover:text-[var(--tender-red)] font-medium"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={signOut}
+            className="text-[var(--tender-navy)] hover:text-[var(--tender-red)] font-medium"
+          >
+            Sign Out
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            className="text-sm text-gray-500 hover:text-[var(--tender-red)] font-medium"
+          >
+            Delete Account
+          </button>
+        </div>
       </div>
 
       <div className="flex h-[calc(100vh-4rem)]">

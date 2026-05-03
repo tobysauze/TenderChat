@@ -11,6 +11,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData: any) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -120,6 +121,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const deleteAccount = async () => {
+    if (isDemoMode) {
+      localStorage.removeItem('demo-user');
+      setUser(null);
+      setSession(null);
+      return { error: null };
+    }
+
+    const { error } = await supabase.rpc('delete_user');
+    if (error) return { error };
+
+    await supabase.auth.signOut();
+    return { error: null };
+  };
+
   const value = {
     user,
     session,
@@ -127,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
