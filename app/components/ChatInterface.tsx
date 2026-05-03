@@ -268,15 +268,31 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
     setNewMessage('');
 
     try {
-      const { error } = await supabase
+      // Insert and read the row back so we can append it to local state
+      // immediately. The realtime listener will fire later for the same
+      // row; the duplicate-id check below prevents it rendering twice.
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           match_id: matchId,
           sender_id: currentUser.id,
           content: messageText,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+      if (data) {
+        const sent: Message = {
+          id: data.id,
+          senderId: data.sender_id,
+          text: data.content,
+          timestamp: new Date(data.created_at),
+        };
+        setMessages(prev =>
+          prev.some(m => m.id === sent.id) ? prev : [...prev, sent]
+        );
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // Re-add the message to the input if sending failed
