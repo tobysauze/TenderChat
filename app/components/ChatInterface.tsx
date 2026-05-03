@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { CrewProfile } from '../types';
 import { supabase } from '../../lib/supabase';
+import ProfileView from './ProfileView';
 
 interface Message {
   id: string;
@@ -74,6 +75,7 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [matchId, setMatchId] = useState<string | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -233,17 +235,21 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
           >
             <XMarkIcon className="w-6 h-6 text-gray-500" />
           </button>
-          <div className="flex items-center">
-            <img 
-              src={matchedProfile.imageUrl} 
+          <button
+            type="button"
+            onClick={() => setShowProfile(true)}
+            className="flex items-center hover:opacity-80 text-left"
+          >
+            <img
+              src={matchedProfile.imageUrl}
               alt={matchedProfile.name}
-              className="w-12 h-12 rounded-full object-cover border-2 border-[#fd267a]"
+              className="w-12 h-12 rounded-full object-cover border-2 border-[var(--tender-red)]"
             />
             <div className="ml-3">
               <h3 className="font-semibold text-lg">{matchedProfile.name}</h3>
-              <p className="text-sm text-gray-500">{matchedProfile.role}</p>
+              <p className="text-sm text-gray-500">{matchedProfile.role} · Tap to view profile</p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Chat Messages */}
@@ -308,6 +314,25 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose }: 
           </div>
         </div>
       </div>
+
+      {showProfile && (
+        <ProfileView
+          profile={{
+            name: matchedProfile.name,
+            age: matchedProfile.age,
+            role: matchedProfile.role,
+            experience: matchedProfile.experience,
+            nationality: matchedProfile.nationality,
+            bio: matchedProfile.bio,
+            availability: matchedProfile.availability,
+            languages: matchedProfile.languages,
+            certifications: matchedProfile.certifications,
+            interests: matchedProfile.interests,
+            photos: matchedProfile.photos || [{ url: matchedProfile.imageUrl, order: 0 }],
+          }}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 } 

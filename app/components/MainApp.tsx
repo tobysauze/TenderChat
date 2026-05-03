@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import ChatInterface from './ChatInterface';
 import ProfileSettings from './ProfileSettings';
+import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
 
 interface Profile {
@@ -43,6 +44,7 @@ export default function MainApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('discover');
+  const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
 
   const [myCompletion, setMyCompletion] = useState<{ percent: number; missing: string[] } | null>(null);
 
@@ -351,6 +353,16 @@ export default function MainApp() {
                 <div className="like-indicator">LIKE</div>
                 <div className="dislike-indicator">NOPE</div>
                 <ProfilePhoto profile={currentProfile} />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setViewingProfile(currentProfile); }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 z-10"
+                  aria-label="View full profile"
+                >
+                  <InformationCircleIcon className="w-6 h-6" />
+                </button>
                 <ProfileOverlay profile={currentProfile} />
               </div>
             </div>
@@ -482,6 +494,14 @@ export default function MainApp() {
           matchedProfile={selectedMatch}
           currentUser={user}
           onClose={() => setSelectedMatch(null)}
+        />
+      )}
+
+      {/* Full profile view */}
+      {viewingProfile && (
+        <ProfileView
+          profile={viewingProfile}
+          onClose={() => setViewingProfile(null)}
         />
       )}
 

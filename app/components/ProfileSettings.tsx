@@ -5,6 +5,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import PhotoUpload, { Photo } from './PhotoUpload';
+import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
 
 interface ProfileSettingsProps {
@@ -24,6 +25,7 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const [data, setData] = useState({
     name: '',
@@ -131,13 +133,21 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
             Back
           </button>
           <h1 className="text-xl font-bold text-[var(--tender-navy)]">Settings</h1>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-[var(--tender-red)] text-white rounded-full font-semibold disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPreviewing(true)}
+              className="px-3 py-2 border border-[var(--tender-navy)] text-[var(--tender-navy)] rounded-full font-medium text-sm hover:bg-[var(--tender-navy)]/5"
+            >
+              Preview
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-[var(--tender-red)] text-white rounded-full font-semibold disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -300,6 +310,26 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+
+      {previewing && (
+        <ProfileView
+          previewBanner
+          profile={{
+            name: data.name,
+            age: data.age,
+            role: data.role,
+            experience: data.experience,
+            nationality: data.nationality,
+            bio: data.bio,
+            availability: data.availability,
+            languages: data.languages,
+            certifications: data.certifications,
+            interests: data.interests,
+            photos: photos.map(p => ({ url: p.url, order: p.order })),
+          }}
+          onClose={() => setPreviewing(false)}
+        />
+      )}
     </div>
   );
 }

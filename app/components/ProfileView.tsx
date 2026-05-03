@@ -1,0 +1,172 @@
+'use client';
+
+import { useState } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/solid';
+
+export interface ViewableProfile {
+  name: string;
+  age?: number;
+  role: string;
+  experience?: string;
+  nationality?: string;
+  bio?: string;
+  availability?: string;
+  languages?: string[];
+  certifications?: string[];
+  interests?: string[];
+  photos: { url: string; order: number }[];
+}
+
+interface ProfileViewProps {
+  profile: ViewableProfile;
+  onClose: () => void;
+  previewBanner?: boolean;
+}
+
+export default function ProfileView({ profile, onClose, previewBanner }: ProfileViewProps) {
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const sortedPhotos = [...profile.photos].sort((a, b) => a.order - b.order);
+  const total = Math.max(sortedPhotos.length, 1);
+
+  const advance = () => setPhotoIdx(i => (i + 1) % total);
+  const back = () => setPhotoIdx(i => (i - 1 + total) % total);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-md sm:rounded-3xl overflow-hidden h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col">
+        {/* Photo */}
+        <div className="relative aspect-[3/4] bg-gray-100 shrink-0 select-none">
+          {sortedPhotos[photoIdx]?.url ? (
+            <img
+              src={sortedPhotos[photoIdx].url}
+              alt={profile.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[var(--tender-blue)]/30 to-[var(--tender-navy)]/30 flex items-center justify-center">
+              <span className="text-7xl font-bold text-[var(--tender-navy)]/40">
+                {profile.name?.[0]?.toUpperCase() || '?'}
+              </span>
+            </div>
+          )}
+
+          {/* Photo segments */}
+          {sortedPhotos.length > 1 && (
+            <div className="absolute top-2 left-2 right-2 flex gap-1">
+              {sortedPhotos.map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-1 rounded-full ${
+                    i === photoIdx ? 'bg-white' : 'bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Tap zones */}
+          {sortedPhotos.length > 1 && (
+            <>
+              <button
+                onClick={back}
+                className="absolute left-0 top-0 bottom-0 w-1/3"
+                aria-label="Previous photo"
+              />
+              <button
+                onClick={advance}
+                className="absolute right-0 top-0 bottom-0 w-1/3"
+                aria-label="Next photo"
+              />
+            </>
+          )}
+
+          {/* Close */}
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-10"
+            aria-label="Close"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
+
+          {previewBanner && (
+            <div className="absolute top-3 left-3 z-10 px-3 py-1 rounded-full bg-[var(--tender-red)] text-white text-xs font-semibold tracking-wide uppercase">
+              Preview
+            </div>
+          )}
+
+          {/* Name overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[var(--tender-navy)]/95 via-[var(--tender-navy)]/40 to-transparent text-white pointer-events-none">
+            <h2 className="text-3xl font-bold">
+              {profile.name || 'Unnamed'}
+              {profile.age ? `, ${profile.age}` : ''}
+            </h2>
+            <p className="text-lg opacity-90">{profile.role || '—'}</p>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {profile.experience && (
+            <Section title="Experience">
+              <p className="text-gray-700">{profile.experience}</p>
+            </Section>
+          )}
+          {profile.nationality && (
+            <Section title="Nationality">
+              <p className="text-gray-700">{profile.nationality}</p>
+            </Section>
+          )}
+          {profile.bio && (
+            <Section title="About">
+              <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
+            </Section>
+          )}
+          {profile.availability && (
+            <Section title="Availability">
+              <p className="text-gray-700">{profile.availability}</p>
+            </Section>
+          )}
+          {profile.languages && profile.languages.length > 0 && (
+            <Section title="Languages">
+              <ChipRow items={profile.languages} className="bg-[var(--tender-blue)]/20 text-[var(--tender-navy)]" />
+            </Section>
+          )}
+          {profile.certifications && profile.certifications.length > 0 && (
+            <Section title="Certifications">
+              <ChipRow items={profile.certifications} className="bg-[var(--tender-navy)]/10 text-[var(--tender-navy)]" />
+            </Section>
+          )}
+          {profile.interests && profile.interests.length > 0 && (
+            <Section title="Interests">
+              <ChipRow items={profile.interests} className="bg-[var(--tender-red)]/10 text-[var(--tender-red)]" />
+            </Section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold text-[var(--tender-navy)] uppercase tracking-wide mb-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function ChipRow({ items, className }: { items: string[]; className: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map(item => (
+        <span key={item} className={`px-3 py-1 rounded-full text-sm ${className}`}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
