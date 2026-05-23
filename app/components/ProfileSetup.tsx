@@ -20,21 +20,17 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const [profileData, setProfileData] = useState({
     name: '',
     role: '',
-    experience: '',
     age: 25,
     nationality: '',
     languages: [] as string[],
-    certifications: [] as string[],
     interests: [] as string[],
     bio: '',
-    availability: '',
   });
 
   const [newLanguage, setNewLanguage] = useState('');
-  const [newCertification, setNewCertification] = useState('');
   const [newInterest, setNewInterest] = useState('');
 
-  const addItem = (field: 'languages' | 'certifications' | 'interests', value: string) => {
+  const addItem = (field: 'languages' | 'interests', value: string) => {
     if (value.trim()) {
       setProfileData(prev => ({
         ...prev,
@@ -43,7 +39,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     }
   };
 
-  const removeItem = (field: 'languages' | 'certifications' | 'interests', index: number) => {
+  const removeItem = (field: 'languages' | 'interests', index: number) => {
     setProfileData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index)
@@ -135,17 +131,6 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
-            <input
-              type="text"
-              value={profileData.experience}
-              onChange={(e) => setProfileData(prev => ({ ...prev, experience: e.target.value }))}
-              placeholder="e.g., 5 years"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-            />
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
             <input
               type="number"
@@ -179,7 +164,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
   if (step === 2) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Add Your Skills</h2>
+        <h2 className="text-3xl font-bold text-[var(--tender-navy)] mb-6">Languages & Interests</h2>
 
         <div className="space-y-6">
           {/* Languages */}
@@ -210,43 +195,6 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
                   {lang}
                   <button
                     onClick={() => removeItem('languages', index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Certifications */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Certifications</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newCertification}
-                onChange={(e) => setNewCertification(e.target.value)}
-                placeholder="Add a certification"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-                onKeyPress={(e) => e.key === 'Enter' && (addItem('certifications', newCertification), setNewCertification(''))}
-              />
-              <button
-                onClick={() => (addItem('certifications', newCertification), setNewCertification(''))}
-                className="px-4 py-2 bg-[var(--tender-blue)] text-white rounded-lg"
-              >
-                Add
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {profileData.certifications.map((cert, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-[var(--tender-navy)]/10 text-[var(--tender-navy)] rounded-full text-sm flex items-center gap-1"
-                >
-                  {cert}
-                  <button
-                    onClick={() => removeItem('certifications', index)}
                     className="text-red-500 hover:text-red-700"
                   >
                     ×
@@ -324,18 +272,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
               value={profileData.bio}
               onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
               rows={4}
-              placeholder="Tell us about yourself, your experience, and what you're looking for..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
-            <input
-              type="text"
-              value={profileData.availability}
-              onChange={(e) => setProfileData(prev => ({ ...prev, availability: e.target.value }))}
-              placeholder="e.g., Available immediately, Available from June 2024"
+              placeholder="Tell people about yourself and what you're looking for…"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
             />
           </div>

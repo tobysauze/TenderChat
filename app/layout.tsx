@@ -6,8 +6,8 @@ import { AuthProvider } from './contexts/AuthContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Tender - Yacht Crew Finder',
-  description: 'Find your perfect yacht crew match',
+  title: 'Tender — Dating for Yacht Crew',
+  description: 'The dating app for yachties. Match and chat with crew across the yachting world.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

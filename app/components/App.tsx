@@ -122,12 +122,13 @@ export default function App() {
         {/* Hero */}
         <section className="px-5 sm:px-8 py-12 sm:py-20 max-w-3xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-4">
-            The dating-style app for{' '}
-            <span className="text-[var(--tender-red)]">yacht crew</span>.
+            The dating app for{' '}
+            <span className="text-[var(--tender-red)]">yachties</span>.
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-xl mx-auto">
-            Swipe, match and chat with crew in the same dock, on the same boat, or heading
-            to the same season. Tender is built for the yachting world — not for everyone else.
+            Meet someone who actually gets the life. Swipe, match and chat with crew in
+            the same marina, on the same dock, or heading to the same season. Tender is for
+            the yachting world — not for everyone else.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -154,15 +155,15 @@ export default function App() {
         <section className="px-5 sm:px-8 pb-16 max-w-5xl mx-auto grid sm:grid-cols-3 gap-4">
           {[
             {
-              title: 'Find your crew',
-              body: "Swipe through profiles built for yachting — role, certs, vessel size, availability — not generic dating.",
+              title: 'Made for yachties',
+              body: 'Everyone here works on boats. No explaining the schedule, the seasons, or where you disappear to for six months.',
             },
             {
               title: 'Match and chat',
               body: 'When the like is mutual, you can message instantly. No paywalls.',
             },
             {
-              title: 'Built for boats',
+              title: 'Built for boat life',
               body: "Online status when you have signal, push notifications when you don't, sane on cabin Wi-Fi.",
             },
           ].map((f) => (

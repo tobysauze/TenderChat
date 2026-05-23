@@ -7,12 +7,9 @@ export interface ViewableProfile {
   name: string;
   age?: number;
   role: string;
-  experience?: string;
   nationality?: string;
   bio?: string;
-  availability?: string;
   languages?: string[];
-  certifications?: string[];
   interests?: string[];
   photos: { url: string; order: number }[];
 }
@@ -109,11 +106,6 @@ export default function ProfileView({ profile, onClose, previewBanner }: Profile
 
           {/* Body */}
           <div className="p-5 space-y-5">
-            {profile.experience && (
-              <Section title="Experience">
-                <p className="text-gray-700">{profile.experience}</p>
-              </Section>
-            )}
             {profile.nationality && (
               <Section title="Nationality">
                 <p className="text-gray-700">{profile.nationality}</p>
@@ -124,19 +116,9 @@ export default function ProfileView({ profile, onClose, previewBanner }: Profile
                 <p className="text-gray-700 whitespace-pre-wrap">{profile.bio}</p>
               </Section>
             )}
-            {profile.availability && (
-              <Section title="Availability">
-                <p className="text-gray-700">{profile.availability}</p>
-              </Section>
-            )}
             {profile.languages && profile.languages.length > 0 && (
               <Section title="Languages">
                 <ChipRow items={profile.languages} className="bg-[var(--tender-blue)]/20 text-[var(--tender-navy)]" />
-              </Section>
-            )}
-            {profile.certifications && profile.certifications.length > 0 && (
-              <Section title="Certifications">
-                <ChipRow items={profile.certifications} className="bg-[var(--tender-navy)]/10 text-[var(--tender-navy)]" />
               </Section>
             )}
             {profile.interests && profile.interests.length > 0 && (

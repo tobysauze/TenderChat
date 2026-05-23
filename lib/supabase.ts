@@ -21,14 +21,11 @@ export interface Database {
           user_id: string
           name: string
           role: string
-          experience: string
           age: number
           nationality: string
           languages: string[]
-          certifications: string[]
           interests: string[]
           bio: string
-          availability: string
           created_at: string
           updated_at: string
         }
@@ -37,14 +34,11 @@ export interface Database {
           user_id: string
           name: string
           role: string
-          experience: string
           age: number
           nationality: string
           languages: string[]
-          certifications: string[]
           interests: string[]
           bio: string
-          availability: string
           created_at?: string
           updated_at?: string
         }
@@ -53,14 +47,11 @@ export interface Database {
           user_id?: string
           name?: string
           role?: string
-          experience?: string
           age?: number
           nationality?: string
           languages?: string[]
-          certifications?: string[]
           interests?: string[]
           bio?: string
-          availability?: string
           created_at?: string
           updated_at?: string
         }

@@ -20,59 +20,6 @@ interface ChatInterfaceProps {
   onUnmatch?: (matchedUserId: string) => void;
 }
 
-// Automated responses based on role
-const getAutomatedResponses = (role: string): string[] => {
-  const commonResponses = [
-    "Thanks for reaching out!",
-    "Great to connect with you.",
-    "How's your current position?",
-    "Are you currently on a yacht?",
-    "What size vessels have you worked on?",
-  ];
-
-  const roleSpecificResponses: Record<string, string[]> = {
-    Captain: [
-      "I'm always looking for skilled crew members.",
-      "Safety and professionalism are my top priorities.",
-      "What's your experience with Mediterranean routes?",
-      "Have you worked on similar sized vessels?",
-    ],
-    "Chief Engineer": [
-      "What systems are you most familiar with?",
-      "Do you have experience with stabilization systems?",
-      "Have you worked with hybrid propulsion?",
-      "What's your take on preventive maintenance?",
-    ],
-    Chef: [
-      "What's your specialty cuisine?",
-      "Do you have experience with dietary restrictions?",
-      "Have you managed provisions for long trips?",
-      "What's your signature dish?",
-    ],
-    "Chief Stewardess": [
-      "What's your interior management style?",
-      "Do you have experience with silver service?",
-      "How do you handle guest preferences?",
-      "What's your approach to team leadership?",
-    ],
-    Deckhand: [
-      "What's your experience with water toys?",
-      "Are you comfortable with night watches?",
-      "Do you have any additional certifications?",
-      "What's your strongest deck skill?",
-    ],
-  };
-
-  const defaultResponses = [
-    "What's your availability like?",
-    "What ports do you prefer?",
-    "Do you have any specific yacht preferences?",
-  ];
-
-  const specificResponses = roleSpecificResponses[role] || defaultResponses;
-  return [...commonResponses, ...specificResponses];
-};
-
 export default function ChatInterface({ matchedProfile, currentUser, onClose, onUnmatch }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -498,12 +445,9 @@ export default function ChatInterface({ matchedProfile, currentUser, onClose, on
             name: matchedProfile.name,
             age: matchedProfile.age,
             role: matchedProfile.role,
-            experience: matchedProfile.experience,
             nationality: matchedProfile.nationality,
             bio: matchedProfile.bio,
-            availability: matchedProfile.availability,
             languages: matchedProfile.languages,
-            certifications: matchedProfile.certifications,
             interests: matchedProfile.interests,
             photos: matchedProfile.photos || [{ url: matchedProfile.imageUrl, order: 0 }],
           }}

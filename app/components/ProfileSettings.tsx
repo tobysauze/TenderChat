@@ -30,18 +30,14 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
   const [data, setData] = useState({
     name: '',
     role: '',
-    experience: '',
     age: 25,
     nationality: '',
     languages: [] as string[],
-    certifications: [] as string[],
     interests: [] as string[],
     bio: '',
-    availability: '',
   });
 
   const [newLanguage, setNewLanguage] = useState('');
-  const [newCertification, setNewCertification] = useState('');
   const [newInterest, setNewInterest] = useState('');
 
   useEffect(() => {
@@ -49,7 +45,7 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
     (async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, name, role, experience, age, nationality, languages, certifications, interests, bio, availability')
+        .select('id, name, role, age, nationality, languages, interests, bio')
         .eq('user_id', user.id)
         .single();
       if (profile) {
@@ -57,14 +53,11 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
         setData({
           name: profile.name || '',
           role: profile.role || '',
-          experience: profile.experience || '',
           age: profile.age || 25,
           nationality: profile.nationality || '',
           languages: profile.languages || [],
-          certifications: profile.certifications || [],
           interests: profile.interests || [],
           bio: profile.bio || '',
-          availability: profile.availability || '',
         });
         await refreshPhotos(profile.id);
       }
@@ -83,13 +76,13 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
     setPhotos(rows || []);
   };
 
-  const addItem = (field: 'languages' | 'certifications' | 'interests', value: string) => {
+  const addItem = (field: 'languages' | 'interests', value: string) => {
     if (value.trim()) {
       setData(prev => ({ ...prev, [field]: [...prev[field], value.trim()] }));
     }
   };
 
-  const removeItem = (field: 'languages' | 'certifications' | 'interests', index: number) => {
+  const removeItem = (field: 'languages' | 'interests', index: number) => {
     setData(prev => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
   };
 
@@ -217,25 +210,14 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
             </select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Experience">
-              <input
-                type="text"
-                value={data.experience}
-                onChange={e => setData(p => ({ ...p, experience: e.target.value }))}
-                placeholder="e.g., 5 years"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-              />
-            </Field>
-            <Field label="Age">
-              <input
-                type="number"
-                value={data.age}
-                onChange={e => setData(p => ({ ...p, age: parseInt(e.target.value) || 0 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-              />
-            </Field>
-          </div>
+          <Field label="Age">
+            <input
+              type="number"
+              value={data.age}
+              onChange={e => setData(p => ({ ...p, age: parseInt(e.target.value) || 0 }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            />
+          </Field>
 
           <Field label="Nationality">
             <input
@@ -251,25 +233,15 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
               value={data.bio}
               onChange={e => setData(p => ({ ...p, bio: e.target.value }))}
               rows={4}
-              placeholder="Tell us about yourself, your experience, and what you're looking for..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-            />
-          </Field>
-
-          <Field label="Availability">
-            <input
-              type="text"
-              value={data.availability}
-              onChange={e => setData(p => ({ ...p, availability: e.target.value }))}
-              placeholder="e.g., Available immediately, Available from June 2024"
+              placeholder="Tell people about yourself and what you're looking for…"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
             />
           </Field>
         </section>
 
-        {/* Skills */}
+        {/* Languages & interests */}
         <section className="bg-white rounded-2xl p-5 shadow-sm space-y-6">
-          <h2 className="text-lg font-semibold text-[var(--tender-navy)]">Skills</h2>
+          <h2 className="text-lg font-semibold text-[var(--tender-navy)]">Languages & interests</h2>
 
           <ChipInput
             label="Languages"
@@ -280,17 +252,6 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
             onAdd={() => { addItem('languages', newLanguage); setNewLanguage(''); }}
             onRemove={i => removeItem('languages', i)}
             placeholder="Add a language"
-          />
-
-          <ChipInput
-            label="Certifications"
-            chipClass="bg-[var(--tender-navy)]/10 text-[var(--tender-navy)]"
-            value={newCertification}
-            onChangeValue={setNewCertification}
-            items={data.certifications}
-            onAdd={() => { addItem('certifications', newCertification); setNewCertification(''); }}
-            onRemove={i => removeItem('certifications', i)}
-            placeholder="Add a certification"
           />
 
           <ChipInput
@@ -321,12 +282,9 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
             name: data.name,
             age: data.age,
             role: data.role,
-            experience: data.experience,
             nationality: data.nationality,
             bio: data.bio,
-            availability: data.availability,
             languages: data.languages,
-            certifications: data.certifications,
             interests: data.interests,
             photos: photos.map(p => ({ url: p.url, order: p.order })),
           }}

@@ -17,14 +17,11 @@ interface Profile {
   user_id: string;
   name: string;
   role: string;
-  experience: string;
   age: number;
   nationality: string;
   languages: string[];
-  certifications: string[];
   interests: string[];
   bio: string;
-  availability: string;
   photos: { url: string; order: number }[];
   imageUrl: string;
   last_seen?: string | null;
@@ -909,14 +906,11 @@ function ProfileOverlay({ profile, onInfo }: { profile: Profile; onInfo?: () => 
             </p>
           )}
           <p className="text-xl opacity-90 mt-1">{profile.role}</p>
-          {profile.experience && (
-            <p className="text-lg opacity-80 mt-1">{profile.experience} experience</p>
-          )}
-          {profile.certifications?.length > 0 && (
+          {profile.interests?.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {profile.certifications.slice(0, 3).map((cert, i) => (
+              {profile.interests.slice(0, 3).map((interest, i) => (
                 <span key={i} className="px-3 py-1 bg-[var(--tender-blue)]/30 rounded-full text-sm backdrop-blur-sm">
-                  {cert}
+                  {interest}
                 </span>
               ))}
             </div>
