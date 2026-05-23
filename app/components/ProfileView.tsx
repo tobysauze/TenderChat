@@ -34,13 +34,17 @@ export default function ProfileView({ profile, onClose, previewBanner }: Profile
         {/* Floating controls — sit above the scroll container so they're always visible */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-30"
+          style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}
+          className="absolute right-3 w-9 h-9 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 z-30"
           aria-label="Close"
         >
           <XMarkIcon className="w-5 h-5" />
         </button>
         {previewBanner && (
-          <div className="absolute top-3 left-3 z-30 px-3 py-1 rounded-full bg-[var(--tender-red)] text-white text-xs font-semibold tracking-wide uppercase">
+          <div
+            style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}
+            className="absolute left-3 z-30 px-3 py-1 rounded-full bg-[var(--tender-red)] text-white text-xs font-semibold tracking-wide uppercase"
+          >
             Preview
           </div>
         )}
