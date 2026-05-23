@@ -6,7 +6,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 // Check if we're using placeholder credentials
 const isPlaceholder = supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder')
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // gotrue-js guards getSession/token refresh with the Web Locks API
+    // (navigator.locks). Inside the Capacitor iOS WKWebView that lock never
+    // resolves, so getSession() hangs forever and the app is stuck on
+    // "Loading...". The app runs in a single web context, so cross-tab
+    // locking isn't needed — run the critical section directly.
+    lock: async (_name, _acquireTimeout, fn) => fn(),
+  },
+})
 
 // Export a flag to check if we're in demo mode
 export const isDemoMode = isPlaceholder
