@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { XMarkIcon, ArrowUpOnSquareIcon } from '@heroicons/react/24/solid';
+import { Capacitor } from '@capacitor/core';
 
 const DISMISS_KEY = 'tender-install-prompt-dismissed';
 
@@ -15,6 +16,9 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Already a native app (Capacitor) — there's nothing to "add to home screen".
+    if (Capacitor.isNativePlatform()) return;
 
     // Already installed — running from the home screen.
     const standalone =

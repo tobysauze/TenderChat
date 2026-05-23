@@ -6,9 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cap:sync": "next build && npx cap sync ios",
+    "cap:open": "npx cap open ios",
+    "cap:assets": "node scripts/generate-app-assets.mjs && npx @capacitor/assets generate --ios"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@heroicons/react": "^2.1.1",
     "@prisma/client": "^5.10.0",
     "@sentry/react": "^10.51.0",
