@@ -136,16 +136,15 @@ CREATE INDEX idx_messages_created_at ON messages(created_at);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (user_id, name, role, experience, age, nationality, bio, availability)
+  -- Only insert columns that exist in the current schema. The job-oriented
+  -- columns (experience, availability) were removed in the dating refocus;
+  -- referencing them here breaks every new signup. See supabase-drop-job-fields.sql.
+  INSERT INTO public.profiles (user_id, name, role, age)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', ''),
     COALESCE(NEW.raw_user_meta_data->>'role', ''),
-    '',
-    25,
-    '',
-    '',
-    ''
+    25
   );
   RETURN NEW;
 END;

@@ -4,6 +4,27 @@
 -- with: delete from auth.users where email like '%@tender-test.local';
 -- (Cascade deletes will wipe their profiles, photos, likes, matches, messages.)
 
+-- Fix the new-user trigger first. It still inserts into experience/availability,
+-- columns dropped by the dating refocus, so it errors on EVERY new auth user —
+-- including real app signups. Redefine it to match the current profiles schema.
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (user_id, name, role, age)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'name', ''),
+    coalesce(new.raw_user_meta_data->>'role', ''),
+    25
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Make this script safely re-runnable: remove any existing test accounts first.
+-- Only touches @tender-test.local users (test data that can't log in) — never real users.
+delete from auth.users where email like '%@tender-test.local';
+
 do $$
 declare
   crew jsonb := $crew$
@@ -65,14 +86,12 @@ begin
     update public.profiles
        set name = member->>'name',
            role = member->>'role',
-           experience = member->>'experience',
            age = (member->>'age')::int,
            nationality = member->>'nationality',
            languages = array(select jsonb_array_elements_text(member->'languages')),
-           certifications = array(select jsonb_array_elements_text(member->'certifications')),
            interests = array(select jsonb_array_elements_text(member->'interests')),
            bio = member->>'bio',
-           availability = member->>'availability'
+           last_seen = now() - (random() * interval '3 days')
      where user_id = new_user_id
      returning id into new_profile_id;
 
