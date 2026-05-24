@@ -20,7 +20,7 @@ export default function TermsOfService() {
       <h2>2. Your account</h2>
       <ul>
         <li>You may only create one account, and only for yourself.</li>
-        <li>Information on your profile must be truthful — your name, age, role and certifications matter to other users making decisions about you.</li>
+        <li>Information on your profile must be truthful — your name, age and role matter to the people you match with.</li>
         <li>Don't impersonate someone else.</li>
         <li>Keep your password secure. You're responsible for activity on your account.</li>
       </ul>
@@ -35,8 +35,9 @@ export default function TermsOfService() {
         <li>Attempt to scrape, reverse-engineer, or disrupt Tender or its underlying services.</li>
       </ul>
       <p>
-        We may suspend or delete accounts at our discretion when these terms are broken — including
-        in response to reports from other users.
+        Tender has <strong>zero tolerance for objectionable content and abusive users</strong>. We
+        may suspend or delete accounts at our discretion when these terms are broken — including in
+        response to reports from other users.
       </p>
 
       <h2>4. Your content</h2>
@@ -48,7 +49,8 @@ export default function TermsOfService() {
 
       <h2>5. Reports and moderation</h2>
       <p>
-        Anyone can report another user from the chat menu. We review reports and may act on them
+        Anyone can report another user from the chat menu. We review every report and remove
+        objectionable content or the users responsible — normally within 24 hours — and may act
         without prior notice. If you believe your account has been suspended in error, email{' '}
         <a href="mailto:hello@tender.ink">hello@tender.ink</a>.
       </p>

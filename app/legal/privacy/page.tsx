@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
       <h2>2. What we collect</h2>
       <ul>
         <li>Account data: email address, password (hashed by Supabase Auth).</li>
-        <li>Profile data: name, age, role, experience, languages, certifications, interests, bio, availability, photos.</li>
+        <li>Profile data: name, age, role, languages, interests, bio, photos.</li>
         <li>Activity: who you swipe on, who you match with, your messages, your last-seen timestamp.</li>
         <li>Device/usage: user agent (for push notifications), IP address (transient, processed by our hosts).</li>
       </ul>
@@ -37,6 +37,12 @@ export default function PrivacyPolicy() {
         <li>To send push notifications, if you enable them, when you receive a match or a message.</li>
         <li>To detect abuse and respond to safety reports.</li>
       </ul>
+      <p>
+        Your messages are private to you and the person you matched with — no other user can see
+        them. They are <strong>not end-to-end encrypted</strong>: we do not monitor private
+        conversations as a matter of routine, but we are able to access message content where it is
+        necessary to investigate a report, prevent abuse, or comply with a legal obligation.
+      </p>
 
       <h2>4. Legal basis (UK / EU GDPR)</h2>
       <p>
