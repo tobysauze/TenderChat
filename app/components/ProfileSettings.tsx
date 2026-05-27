@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import PhotoUpload, { Photo } from './PhotoUpload';
 import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
+import { MARINAS, SEASONS, AVAILABILITY, PROMPTS, ProfilePrompt } from '../../lib/yachting';
 
 interface ProfileSettingsProps {
   onClose: () => void;
@@ -35,17 +36,32 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
     languages: [] as string[],
     interests: [] as string[],
     bio: '',
+    home_port: '',
+    season: '',
+    availability: '',
+    prompts: [] as ProfilePrompt[],
   });
 
   const [newLanguage, setNewLanguage] = useState('');
   const [newInterest, setNewInterest] = useState('');
+
+  const setPrompt = (index: number, prompt: string, answer: string) => {
+    setData(prev => {
+      const next = [...prev.prompts];
+      next[index] = { prompt, answer };
+      return { ...prev, prompts: next };
+    });
+  };
+
+  const cleanPrompts = (prompts: ProfilePrompt[]): ProfilePrompt[] =>
+    prompts.filter(p => p && p.answer && p.answer.trim()).map(p => ({ prompt: p.prompt, answer: p.answer.trim() }));
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, name, role, age, nationality, languages, interests, bio')
+        .select('id, name, role, age, nationality, languages, interests, bio, home_port, season, availability, prompts')
         .eq('user_id', user.id)
         .single();
       if (profile) {
@@ -58,6 +74,10 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
           languages: profile.languages || [],
           interests: profile.interests || [],
           bio: profile.bio || '',
+          home_port: profile.home_port || '',
+          season: profile.season || '',
+          availability: profile.availability || '',
+          prompts: Array.isArray(profile.prompts) ? profile.prompts : [],
         });
         await refreshPhotos(profile.id);
       }
@@ -92,7 +112,7 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ ...data, updated_at: new Date().toISOString() })
+        .update({ ...data, prompts: cleanPrompts(data.prompts), updated_at: new Date().toISOString() })
         .eq('user_id', user.id);
       if (error) throw error;
       setSavedAt(Date.now());
@@ -266,6 +286,68 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
           />
         </section>
 
+        {/* Season & location */}
+        <section className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+          <h2 className="text-lg font-semibold text-[var(--tender-navy)]">Season & location</h2>
+
+          <Field label="Current marina / port">
+            <select
+              value={data.home_port}
+              onChange={e => setData(p => ({ ...p, home_port: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            >
+              <option value="">Select a marina</option>
+              {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Season">
+            <select
+              value={data.season}
+              onChange={e => setData(p => ({ ...p, season: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            >
+              <option value="">Select your season</option>
+              {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </Field>
+
+          <Field label="Availability">
+            <select
+              value={data.availability}
+              onChange={e => setData(p => ({ ...p, availability: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            >
+              <option value="">Select your availability</option>
+              {AVAILABILITY.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </Field>
+        </section>
+
+        {/* Prompts */}
+        <section className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+          <h2 className="text-lg font-semibold text-[var(--tender-navy)]">Prompts</h2>
+          <p className="text-sm text-gray-500 -mt-2">Answer a few yachtie prompts so people get a feel for you.</p>
+          {[0, 1, 2].map(i => (
+            <div key={i} className="p-3 border border-gray-200 rounded-lg">
+              <select
+                value={data.prompts[i]?.prompt || PROMPTS[i]}
+                onChange={e => setPrompt(i, e.target.value, data.prompts[i]?.answer || '')}
+                className="w-full px-2 py-1.5 mb-2 text-sm font-medium text-[var(--tender-navy)] border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+              >
+                {PROMPTS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <input
+                type="text"
+                value={data.prompts[i]?.answer || ''}
+                onChange={e => setPrompt(i, data.prompts[i]?.prompt || PROMPTS[i], e.target.value)}
+                placeholder="Your answer…"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+              />
+            </div>
+          ))}
+        </section>
+
         <button
           onClick={handleSave}
           disabled={saving}
@@ -286,6 +368,10 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
             bio: data.bio,
             languages: data.languages,
             interests: data.interests,
+            home_port: data.home_port,
+            season: data.season,
+            availability: data.availability,
+            prompts: cleanPrompts(data.prompts),
             photos: photos.map(p => ({ url: p.url, order: p.order })),
           }}
           onClose={() => setPreviewing(false)}

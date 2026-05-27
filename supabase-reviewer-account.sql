@@ -36,6 +36,14 @@ begin
          bio = 'Demo account for app review.',
          languages = array['English'],
          interests = array['Sailing','Diving','Travel'],
+         home_port = 'Antibes (Port Vauban)',
+         season = 'Mediterranean season',
+         availability = 'Available',
+         verified = true,
+         prompts = jsonb_build_array(
+           jsonb_build_object('prompt','Med or Caribbean?','answer','Med all the way'),
+           jsonb_build_object('prompt','Why I got into yachting','answer','For the travel and the people')
+         ),
          last_seen = now()
    where user_id = rid
    returning id into pid;

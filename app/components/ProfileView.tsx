@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { departmentForRole, ProfilePrompt } from '../../lib/yachting';
 
 export interface ViewableProfile {
   name: string;
@@ -11,6 +12,11 @@ export interface ViewableProfile {
   bio?: string;
   languages?: string[];
   interests?: string[];
+  home_port?: string | null;
+  season?: string | null;
+  availability?: string | null;
+  prompts?: ProfilePrompt[] | null;
+  verified?: boolean | null;
   photos: { url: string; order: number }[];
 }
 
@@ -100,16 +106,49 @@ export default function ProfileView({ profile, onClose, previewBanner }: Profile
 
             {/* Name overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[var(--tender-navy)]/95 via-[var(--tender-navy)]/40 to-transparent text-white pointer-events-none">
-              <h2 className="text-3xl font-bold">
-                {profile.name || 'Unnamed'}
-                {profile.age ? `, ${profile.age}` : ''}
+              <h2 className="text-3xl font-bold flex items-center gap-2">
+                <span>{profile.name || 'Unnamed'}{profile.age ? `, ${profile.age}` : ''}</span>
+                {profile.verified && (
+                  <CheckBadgeIcon className="w-6 h-6 text-[var(--tender-blue)]" aria-label="Verified crew" />
+                )}
               </h2>
-              <p className="text-lg opacity-90">{profile.role || '—'}</p>
+              <p className="text-lg opacity-90">
+                {profile.role || '—'}
+                {departmentForRole(profile.role) && (
+                  <span className="opacity-70"> · {departmentForRole(profile.role)}</span>
+                )}
+              </p>
+              {(profile.home_port || profile.season) && (
+                <p className="text-sm opacity-90 mt-1">
+                  {[profile.home_port, profile.season].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Body */}
           <div className="p-5 space-y-5">
+            {(profile.home_port || profile.season || profile.availability) && (
+              <Section title="On the water">
+                <div className="flex flex-wrap gap-2">
+                  {profile.home_port && <InfoChip label={profile.home_port} />}
+                  {profile.season && <InfoChip label={profile.season} />}
+                  {profile.availability && <InfoChip label={profile.availability} />}
+                </div>
+              </Section>
+            )}
+            {profile.prompts && profile.prompts.length > 0 && (
+              <Section title="Prompts">
+                <div className="space-y-3">
+                  {profile.prompts.map((p, i) => (
+                    <div key={i} className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-[var(--tender-navy)] uppercase tracking-wide mb-1">{p.prompt}</p>
+                      <p className="text-gray-800">{p.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
             {profile.nationality && (
               <Section title="Nationality">
                 <p className="text-gray-700">{profile.nationality}</p>
@@ -145,6 +184,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </h3>
       {children}
     </div>
+  );
+}
+
+function InfoChip({ label }: { label: string }) {
+  return (
+    <span className="px-3 py-1 rounded-full text-sm bg-[var(--tender-blue)]/20 text-[var(--tender-navy)] font-medium">
+      {label}
+    </span>
   );
 }
 

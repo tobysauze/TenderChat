@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, isDemoMode } from '../../lib/supabase';
 import PhotoUpload, { Photo } from './PhotoUpload';
+import { MARINAS, SEASONS, AVAILABILITY, PROMPTS, ProfilePrompt } from '../../lib/yachting';
 
 interface ProfileSetupProps {
   onComplete: () => void;
@@ -25,7 +26,25 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
     languages: [] as string[],
     interests: [] as string[],
     bio: '',
+    home_port: '',
+    season: '',
+    availability: '',
+    prompts: [] as ProfilePrompt[],
   });
+
+  // Set the prompt/answer for a fixed slot. Empty answers are filtered out at
+  // save time (see handleSaveProfile) so slot indices stay stable while editing.
+  const setPrompt = (index: number, prompt: string, answer: string) => {
+    setProfileData(prev => {
+      const next = [...prev.prompts];
+      next[index] = { prompt, answer };
+      return { ...prev, prompts: next };
+    });
+  };
+
+  // Drop empty/blank prompt slots and trim answers for persistence.
+  const cleanPrompts = (prompts: ProfilePrompt[]): ProfilePrompt[] =>
+    prompts.filter(p => p && p.answer && p.answer.trim()).map(p => ({ prompt: p.prompt, answer: p.answer.trim() }));
 
   const [newLanguage, setNewLanguage] = useState('');
   const [newInterest, setNewInterest] = useState('');
@@ -61,11 +80,13 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
     setLoading(true);
     try {
+      const payload = { ...profileData, prompts: cleanPrompts(profileData.prompts) };
+
       if (isDemoMode) {
         const demoProfile = {
           id: 'demo-profile-' + Date.now(),
           user_id: user.id,
-          ...profileData,
+          ...payload,
           created_at: new Date().toISOString(),
         };
         localStorage.setItem('demo-profile', JSON.stringify(demoProfile));
@@ -76,7 +97,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
       const { data, error } = await supabase
         .from('profiles')
-        .upsert({ user_id: user.id, ...profileData }, { onConflict: 'user_id' })
+        .upsert({ user_id: user.id, ...payload }, { onConflict: 'user_id' })
         .select('id')
         .single();
 
@@ -148,6 +169,40 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
               onChange={(e) => setProfileData(prev => ({ ...prev, nationality: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
             />
+          </div>
+
+          <div className="pt-2 border-t">
+            <p className="text-sm font-semibold text-[var(--tender-navy)] mb-3">Where you are in the season</p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current marina / port</label>
+            <select
+              value={profileData.home_port}
+              onChange={(e) => setProfileData(prev => ({ ...prev, home_port: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)] mb-3"
+            >
+              <option value="">Select a marina</option>
+              {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
+            <select
+              value={profileData.season}
+              onChange={(e) => setProfileData(prev => ({ ...prev, season: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)] mb-3"
+            >
+              <option value="">Select your season</option>
+              {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+            <select
+              value={profileData.availability}
+              onChange={(e) => setProfileData(prev => ({ ...prev, availability: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+            >
+              <option value="">Select your availability</option>
+              {AVAILABILITY.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
           </div>
 
           <button
@@ -275,6 +330,29 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
               placeholder="Tell people about yourself and what you're looking for…"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Prompts</label>
+            <p className="text-xs text-gray-500 mb-3">Answer a few yachtie prompts so people get a feel for you.</p>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="mb-3 p-3 border border-gray-200 rounded-lg">
+                <select
+                  value={profileData.prompts[i]?.prompt || PROMPTS[i]}
+                  onChange={(e) => setPrompt(i, e.target.value, profileData.prompts[i]?.answer || '')}
+                  className="w-full px-2 py-1.5 mb-2 text-sm font-medium text-[var(--tender-navy)] border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+                >
+                  {PROMPTS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <input
+                  type="text"
+                  value={profileData.prompts[i]?.answer || ''}
+                  onChange={(e) => setPrompt(i, profileData.prompts[i]?.prompt || PROMPTS[i], e.target.value)}
+                  placeholder="Your answer…"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+                />
+              </div>
+            ))}
           </div>
 
           <div className="flex gap-4">

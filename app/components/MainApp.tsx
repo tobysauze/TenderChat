@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon, InformationCircleIcon, CheckBadgeIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import ChatInterface from './ChatInterface';
@@ -11,6 +11,7 @@ import { computeCompletion } from '../../lib/profileCompletion';
 import { formatLastSeen, isOnline } from '../../lib/lastSeen';
 import { isPushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from '../../lib/push';
 import { track } from '../../lib/observability';
+import { departmentForRole, ProfilePrompt, MARINAS, SEASONS, AVAILABILITY, DEPARTMENTS } from '../../lib/yachting';
 
 interface Profile {
   id: string;
@@ -22,6 +23,11 @@ interface Profile {
   languages: string[];
   interests: string[];
   bio: string;
+  home_port?: string | null;
+  season?: string | null;
+  availability?: string | null;
+  prompts?: ProfilePrompt[] | null;
+  verified?: boolean | null;
   photos: { url: string; order: number }[];
   imageUrl: string;
   last_seen?: string | null;
@@ -53,6 +59,12 @@ export default function MainApp() {
   const [tab, setTab] = useState<Tab>('discover');
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
+
+  // Deck filters — the yacht-specific discovery controls (marina / season /
+  // department / availability / verified). Applied client-side to the loaded deck.
+  const emptyFilters = { home_port: '', season: '', department: '', availability: '', verifiedOnly: false };
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState(emptyFilters);
 
   const [myCompletion, setMyCompletion] = useState<{ percent: number; missing: string[] } | null>(null);
 
@@ -416,7 +428,7 @@ export default function MainApp() {
     if (swipeDirection !== null || !user) return;
 
     setSwipeDirection(direction);
-    const currentProfile = profiles[currentProfileIndex];
+    const currentProfile = filteredProfiles[currentProfileIndex];
 
     if (currentProfile) {
       track('swipe', { direction, target_role: currentProfile.role });
@@ -480,10 +492,24 @@ export default function MainApp() {
     setRotation(0);
   };
 
-  const currentProfile = profiles[currentProfileIndex];
-  const nextProfile = profiles[currentProfileIndex + 1];
-  const thirdProfile = profiles[currentProfileIndex + 2];
-  const noMoreProfiles = !loading && currentProfileIndex >= profiles.length;
+  const activeFilterCount =
+    [filters.home_port, filters.season, filters.department, filters.availability].filter(Boolean).length +
+    (filters.verifiedOnly ? 1 : 0);
+
+  const filteredProfiles = profiles.filter(p => {
+    if (filters.home_port && p.home_port !== filters.home_port) return false;
+    if (filters.season && p.season !== filters.season) return false;
+    if (filters.availability && p.availability !== filters.availability) return false;
+    if (filters.department && departmentForRole(p.role) !== filters.department) return false;
+    if (filters.verifiedOnly && !p.verified) return false;
+    return true;
+  });
+
+  const currentProfile = filteredProfiles[currentProfileIndex];
+  const nextProfile = filteredProfiles[currentProfileIndex + 1];
+  const thirdProfile = filteredProfiles[currentProfileIndex + 2];
+  const noMoreProfiles = !loading && currentProfileIndex >= filteredProfiles.length;
+  const noMatchesForFilters = !loading && filteredProfiles.length === 0 && profiles.length > 0 && activeFilterCount > 0;
 
   const currentPhotos = currentProfile
     ? currentProfile.photos.slice().sort((a, b) => a.order - b.order)
@@ -494,6 +520,11 @@ export default function MainApp() {
   useEffect(() => {
     setCurrentPhotoIdx(0);
   }, [currentProfile?.id]);
+
+  // Reset to the top of the deck whenever the filters change.
+  useEffect(() => {
+    setCurrentProfileIndex(0);
+  }, [filters]);
 
   const goPrevPhoto = () => setCurrentPhotoIdx(i => Math.max(0, i - 1));
   const goNextPhoto = () => setCurrentPhotoIdx(i => Math.min(totalCurrentPhotos - 1, i + 1));
@@ -685,13 +716,24 @@ export default function MainApp() {
             </>
           )}
 
-          {noMoreProfiles && (
+          {noMatchesForFilters && (
+            <div className="m-auto">
+              <EmptyState
+                icon={<AdjustmentsHorizontalIcon className="w-10 h-10 text-[var(--tender-red)]" />}
+                title="No crew match your filters"
+                body="Try widening your marina, season or department filters to see more people."
+                action={{ label: 'Clear filters', onClick: () => setFilters(emptyFilters) }}
+              />
+            </div>
+          )}
+
+          {noMoreProfiles && !noMatchesForFilters && profiles.length > 0 && (
             <div className="md:mt-0 m-auto">
               <EmptyState
                 icon={<FireIcon className="w-10 h-10 text-[var(--tender-red)]" />}
                 title="You're all caught up"
                 body="You've seen everyone available right now. Check back later — new crew sign up every day."
-                action={profiles.length > 0 ? { label: 'Swipe again', onClick: () => setCurrentProfileIndex(0) } : undefined}
+                action={filteredProfiles.length > 0 ? { label: 'Swipe again', onClick: () => setCurrentProfileIndex(0) } : undefined}
               />
             </div>
           )}
@@ -729,6 +771,19 @@ export default function MainApp() {
       <div className="h-16 sm:h-20 flex items-center justify-between px-4 sm:px-6">
         <img src="/tender-logo.svg" alt="Tender" className="h-12 sm:h-16" />
 
+        <div className="flex items-center gap-1">
+        <button
+          onClick={() => setShowFilters(true)}
+          className="relative p-2 hover:bg-gray-100 rounded-full"
+          aria-label="Filters"
+        >
+          <AdjustmentsHorizontalIcon className="w-6 h-6 text-[var(--tender-navy)]" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--tender-red)] text-white text-[10px] font-bold flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
         <div className="relative">
           <button
             onClick={() => setAccountMenuOpen(o => !o)}
@@ -785,6 +840,7 @@ export default function MainApp() {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
       </div>
@@ -852,6 +908,62 @@ export default function MainApp() {
         />
       )}
 
+      {/* Deck filters */}
+      {showFilters && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center"
+          onClick={() => setShowFilters(false)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+            style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-xl font-bold text-[var(--tender-navy)]">Filter crew</h2>
+              <button
+                onClick={() => setShowFilters(false)}
+                aria-label="Close"
+                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
+              >
+                <XMarkIcon className="w-5 h-5 text-[var(--tender-navy)]" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Find crew in your marina, season or department.</p>
+
+            <FilterSelect label="Marina / port" value={filters.home_port} options={MARINAS} anyLabel="Any marina" onChange={v => setFilters(f => ({ ...f, home_port: v }))} />
+            <FilterSelect label="Season" value={filters.season} options={SEASONS} anyLabel="Any season" onChange={v => setFilters(f => ({ ...f, season: v }))} />
+            <FilterSelect label="Department" value={filters.department} options={[...DEPARTMENTS]} anyLabel="Any department" onChange={v => setFilters(f => ({ ...f, department: v }))} />
+            <FilterSelect label="Availability" value={filters.availability} options={AVAILABILITY} anyLabel="Any availability" onChange={v => setFilters(f => ({ ...f, availability: v }))} />
+
+            <label className="flex items-center justify-between py-3 border-t mt-2 cursor-pointer">
+              <span className="font-medium text-[var(--tender-navy)]">Verified crew only</span>
+              <input
+                type="checkbox"
+                checked={filters.verifiedOnly}
+                onChange={e => setFilters(f => ({ ...f, verifiedOnly: e.target.checked }))}
+                className="w-5 h-5 accent-[var(--tender-red)]"
+              />
+            </label>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setFilters(emptyFilters)}
+                className="flex-1 py-3 rounded-full border border-gray-300 font-semibold text-[var(--tender-navy)] hover:bg-gray-50"
+              >
+                Clear all
+              </button>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="flex-1 py-3 rounded-full bg-[var(--tender-red)] text-white font-semibold"
+              >
+                Show {filteredProfiles.length} crew
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Match alert */}
       {showMatchAlert && matchAlertProfile && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
@@ -898,7 +1010,12 @@ function ProfileOverlay({ profile, onInfo }: { profile: Profile; onInfo?: () => 
     <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[var(--tender-navy)]/90 via-[var(--tender-navy)]/50 to-transparent text-white">
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-3xl font-bold">{profile.name}{profile.age ? `, ${profile.age}` : ''}</h2>
+          <h2 className="text-3xl font-bold flex items-center gap-2">
+            <span className="truncate">{profile.name}{profile.age ? `, ${profile.age}` : ''}</span>
+            {profile.verified && (
+              <CheckBadgeIcon className="w-6 h-6 shrink-0 text-[var(--tender-blue)]" aria-label="Verified crew" />
+            )}
+          </h2>
           {status && (
             <p className="text-sm opacity-90 mt-1 flex items-center gap-1.5">
               {online && <span className="inline-block w-2 h-2 rounded-full bg-green-400" />}
@@ -906,6 +1023,11 @@ function ProfileOverlay({ profile, onInfo }: { profile: Profile; onInfo?: () => 
             </p>
           )}
           <p className="text-xl opacity-90 mt-1">{profile.role}</p>
+          {(profile.home_port || profile.season) && (
+            <p className="text-sm opacity-90 mt-1">
+              ⚓ {[profile.home_port, profile.season].filter(Boolean).join(' · ')}
+            </p>
+          )}
           {profile.interests?.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {profile.interests.slice(0, 3).map((interest, i) => (
@@ -953,6 +1075,30 @@ function EmptyState({
           {action.label}
         </button>
       )}
+    </div>
+  );
+}
+
+function FilterSelect({
+  label, value, options, anyLabel, onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  anyLabel: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="mb-3">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
+      >
+        <option value="">{anyLabel}</option>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 }
