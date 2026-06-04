@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { XMarkIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, CheckBadgeIcon, HeartIcon } from '@heroicons/react/24/solid';
 import { departmentForRole, ProfilePrompt } from '../../lib/yachting';
 
 export interface ViewableProfile {
@@ -24,9 +24,12 @@ interface ProfileViewProps {
   profile: ViewableProfile;
   onClose: () => void;
   previewBanner?: boolean;
+  /** When present, a floating heart button is shown — used by the directory to
+   * let the viewer like (and potentially match with) the profile. */
+  onLike?: () => void;
 }
 
-export default function ProfileView({ profile, onClose, previewBanner }: ProfileViewProps) {
+export default function ProfileView({ profile, onClose, previewBanner, onLike }: ProfileViewProps) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const sortedPhotos = [...profile.photos].sort((a, b) => a.order - b.order);
   const total = Math.max(sortedPhotos.length, 1);
@@ -53,6 +56,16 @@ export default function ProfileView({ profile, onClose, previewBanner }: Profile
           >
             Preview
           </div>
+        )}
+        {onLike && (
+          <button
+            onClick={onLike}
+            style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+            className="absolute right-4 w-14 h-14 rounded-full bg-[var(--tender-red)] text-white flex items-center justify-center shadow-lg ring-2 ring-white z-30 active:scale-95 transition-transform"
+            aria-label="Like"
+          >
+            <HeartIcon className="w-7 h-7" />
+          </button>
         )}
 
         {/* Single scroll region — photo + body scroll together */}

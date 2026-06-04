@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon, InformationCircleIcon, CheckBadgeIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, XMarkIcon, Cog6ToothIcon, ChatBubbleLeftRightIcon, FireIcon, InformationCircleIcon, CheckBadgeIcon, AdjustmentsHorizontalIcon, UserGroupIcon, ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import ChatInterface from './ChatInterface';
 import ProfileSettings from './ProfileSettings';
 import ProfileView from './ProfileView';
+import CrewDirectory from './CrewDirectory';
+import MarinaChat from './MarinaChat';
 import { computeCompletion } from '../../lib/profileCompletion';
 import { formatLastSeen, isOnline } from '../../lib/lastSeen';
 import { isPushSupported, getCurrentSubscription, subscribePush, unsubscribePush } from '../../lib/push';
@@ -41,7 +43,9 @@ interface LatestMessage {
 
 const PLACEHOLDER_AVATAR = '/tender-logo.svg';
 
-type Tab = 'discover' | 'matches';
+// "Crew" is the marina-based directory (primary discovery); "Marina" is the
+// per-marina open chat room; "Matches" is the existing matches/chat list.
+type Tab = 'crew' | 'marina' | 'matches';
 
 export default function MainApp() {
   const { user, signOut, deleteAccount } = useAuth();
@@ -53,10 +57,16 @@ export default function MainApp() {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [showMatchAlert, setShowMatchAlert] = useState(false);
   const [matchAlertProfile, setMatchAlertProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  // The directory and marina-chat components own their own loading UI; this
+  // top-level `loading` only gated the (now-removed) swipe deck.
+  const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('discover');
+  const [tab, setTab] = useState<Tab>('crew');
+  // The current user's marina (used as the default for the directory + chat room).
+  const [myHomePort, setMyHomePort] = useState<string>('');
+  // User IDs the user has blocked (or has been blocked by) — excluded from the directory.
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
   const [currentPhotoIdx, setCurrentPhotoIdx] = useState(0);
 
@@ -87,9 +97,9 @@ export default function MainApp() {
 
   useEffect(() => {
     if (user) {
-      loadProfiles();
       loadMatches();
       loadMyCompletion();
+      loadBlocks();
       refreshPushState();
     }
   }, [user]);
@@ -237,7 +247,21 @@ export default function MainApp() {
         photoCount: profile.photos?.length || 0,
       });
       setMyCompletion(result);
+      setMyHomePort(profile.home_port || '');
     }
+  };
+
+  // Blocks (both directions) — used to exclude users from the directory.
+  const loadBlocks = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('blocks')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+    const ids = new Set<string>(
+      (data || []).map((r: any) => (r.blocker_id === user.id ? r.blocked_id : r.blocker_id))
+    );
+    setBlockedIds(ids);
   };
 
   const handleDeleteAccount = async () => {
@@ -560,7 +584,7 @@ export default function MainApp() {
             icon={<HeartIcon className="w-10 h-10 text-[var(--tender-red)]" />}
             title="No matches yet"
             body="Start swiping to find your crew. When someone you've liked likes you back, they'll show up here."
-            action={{ label: 'Start swiping', onClick: () => setTab('discover') }}
+            action={{ label: 'Browse crew', onClick: () => setTab('crew') }}
           />
         ) : (
           <div className="matches-grid">
@@ -760,6 +784,27 @@ export default function MainApp() {
     </div>
   );
 
+  // Anyone the user has blocked or already matched with is hidden from the
+  // crew directory — matches are already in the Matches tab.
+  const excludedUserIds = new Set<string>([
+    user?.id ?? '',
+    ...Array.from(blockedIds),
+    ...matches.map(m => m.user_id),
+  ]);
+
+  const crewPanel = user ? (
+    <CrewDirectory
+      userId={user.id}
+      defaultMarina={myHomePort}
+      excludedUserIds={excludedUserIds}
+      onViewProfile={p => setViewingProfile(p as unknown as Profile)}
+    />
+  ) : null;
+
+  const marinaPanel = user ? (
+    <MarinaChat userId={user.id} defaultMarina={myHomePort} />
+  ) : null;
+
   return (
     <main className="h-[100dvh] flex flex-col overflow-hidden">
       {/* Top Bar — outer wrapper handles iOS PWA safe-area-inset-top so the
@@ -854,29 +899,43 @@ export default function MainApp() {
 
         {/* Main content area */}
         <div className="flex-1 flex flex-col min-h-0">
-          {/* Mobile: show selected tab panel */}
-          <div className="flex-1 md:hidden min-h-0 flex flex-col">
-            {tab === 'discover' ? discoverPanel : matchesPanel}
+          {/* Desktop: small tab toggle at top of main, between Crew and Marina.
+              Matches stays visible in the left sidebar. */}
+          <div className="hidden md:flex shrink-0 border-b bg-white">
+            <DesktopTab active={tab === 'crew'} onClick={() => setTab('crew')} icon={<UserGroupIcon className="w-5 h-5" />} label="Crew" />
+            <DesktopTab active={tab === 'marina'} onClick={() => setTab('marina')} icon={<ChatBubbleLeftEllipsisIcon className="w-5 h-5" />} label="Marina chat" />
           </div>
-          {/* Desktop: always discover */}
-          <div className="hidden md:flex flex-1 min-h-0">
-            {discoverPanel}
+
+          {/* Mobile + desktop: show the selected panel */}
+          <div className="flex-1 min-h-0 flex flex-col">
+            {tab === 'crew' && crewPanel}
+            {tab === 'marina' && marinaPanel}
+            {tab === 'matches' && <div className="flex-1 md:hidden">{matchesPanel}</div>}
+            {/* On desktop, "matches" tab isn't applicable to the main area (matches
+                live in the sidebar); fall back to the crew directory. */}
+            {tab === 'matches' && <div className="hidden md:block flex-1">{crewPanel}</div>}
           </div>
         </div>
       </div>
 
-      {/* Mobile bottom nav — outer wrapper handles iOS PWA safe-area-inset-bottom
-          so tab labels don't overlap the home indicator. */}
+      {/* Mobile bottom nav — Crew / Marina / Matches. Outer wrapper handles iOS
+          PWA safe-area-inset-bottom so tab labels don't overlap the home indicator. */}
       <nav
         className="md:hidden bg-white border-t shrink-0"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex items-center justify-around h-16">
           <TabButton
-            active={tab === 'discover'}
-            onClick={() => setTab('discover')}
-            icon={<FireIcon className="w-6 h-6" />}
-            label="Discover"
+            active={tab === 'crew'}
+            onClick={() => setTab('crew')}
+            icon={<UserGroupIcon className="w-6 h-6" />}
+            label="Crew"
+          />
+          <TabButton
+            active={tab === 'marina'}
+            onClick={() => setTab('marina')}
+            icon={<ChatBubbleLeftEllipsisIcon className="w-6 h-6" />}
+            label="Marina"
           />
           <TabButton
             active={tab === 'matches'}
@@ -900,11 +959,16 @@ export default function MainApp() {
         />
       )}
 
-      {/* Full profile view */}
+      {/* Full profile view (with Like — the directory's primary action). */}
       {viewingProfile && (
         <ProfileView
           profile={viewingProfile}
           onClose={() => setViewingProfile(null)}
+          onLike={() => {
+            const target = viewingProfile;
+            setViewingProfile(null);
+            void recordLikeAndMaybeMatch(target);
+          }}
         />
       )}
 
@@ -1076,6 +1140,29 @@ function EmptyState({
         </button>
       )}
     </div>
+  );
+}
+
+function DesktopTab({
+  active, onClick, icon, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${
+        active
+          ? 'border-[var(--tender-red)] text-[var(--tender-red)]'
+          : 'border-transparent text-gray-500 hover:text-[var(--tender-navy)]'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
