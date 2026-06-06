@@ -3,43 +3,194 @@
 // organised entirely around the season. Used across profile setup, the deck and
 // filtering.
 
-// Curated list of the marinas / ports where yacht crew actually congregate,
-// grouped loosely by cruising ground. Stored on the profile as plain text.
+// Comprehensive list of the marinas, ports and refit yards where superyacht
+// crew actually live and work, grouped loosely by cruising ground. Stored on
+// the profile as plain text. Where a single city has multiple iconic marinas
+// (Palma, Phuket, Athens, Antigua) we list them separately.
 export const MARINAS: string[] = [
-  // Mediterranean — France
+  // Côte d'Azur — France
   'Antibes (Port Vauban)',
   'Monaco (Port Hercule)',
+  'Monaco (Port de Fontvieille)',
   'Cannes',
   'Nice',
+  'Villefranche-sur-Mer',
+  'Beaulieu-sur-Mer',
+  'Saint-Jean-Cap-Ferrat',
   'Golfe-Juan',
   'Saint-Tropez',
-  // Mediterranean — Spain
-  'Palma de Mallorca',
-  'Barcelona',
-  'Ibiza',
-  // Mediterranean — Italy
+  'Sainte-Maxime',
+  'La Ciotat',
+  'Marseille',
+  'Toulon',
+  'Hyères',
+  'Bormes-les-Mimosas',
+  // Corsica
+  'Calvi (Corsica)',
+  'Ajaccio (Corsica)',
+  'Bonifacio (Corsica)',
+  // Italy — Ligurian / Tyrrhenian
+  'Sanremo',
+  'Imperia',
+  'Loano',
   'Genoa',
+  'Portofino',
+  'La Spezia',
   'Viareggio',
-  'Naples',
+  'Livorno',
+  // Italy — Sardinia
+  'Porto Cervo (Sardinia)',
+  'Porto Rotondo (Sardinia)',
   'Olbia (Sardinia)',
-  // Mediterranean — other
-  'Athens',
-  'Split',
-  'Tivat (Montenegro)',
+  'Cagliari (Sardinia)',
+  // Italy — South & Sicily
+  'Naples',
+  'Capri',
+  'Amalfi',
+  'Gaeta',
+  'Bari',
+  'Palermo (Sicily)',
+  // Spain — Balearics
+  'Palma de Mallorca',
+  'Port Adriano (Mallorca)',
+  'Puerto Portals (Mallorca)',
+  'Ibiza',
+  'Formentera',
+  'Mahón (Menorca)',
+  // Spain — mainland
+  'Barcelona',
+  'Valencia',
+  'Tarragona',
+  'Palamós',
+  'Puerto Banús (Marbella)',
+  'Sotogrande',
+  'Málaga',
+  // Gibraltar & Malta
   'Gibraltar',
-  // Caribbean
+  'Valletta (Malta)',
+  // Greece
+  'Athens (Marina Zeas)',
+  'Athens (Flisvos)',
+  'Athens (Alimos)',
+  'Mykonos',
+  'Santorini',
+  'Corfu',
+  'Rhodes',
+  'Crete (Heraklion)',
+  // Adriatic
+  'Split (ACI)',
+  'Dubrovnik (ACI)',
+  'Hvar',
+  'Trogir',
+  'Šibenik',
+  'Pula',
+  'Tivat (Porto Montenegro)',
+  // Turkey
+  'Bodrum (Yalikavak)',
+  'Marmaris',
+  'Göcek',
+  'Antalya',
+  // Caribbean — Lesser Antilles
   'Antigua (English Harbour)',
-  'Sint Maarten',
-  'St Thomas (USVI)',
+  'Antigua (Falmouth Harbour)',
+  'Antigua (Jolly Harbour)',
+  'Sint Maarten (Simpson Bay)',
+  'St. Barths (Gustavia)',
+  'St. Lucia (Rodney Bay)',
+  'Grenada (Port Louis)',
+  'Martinique',
+  'Guadeloupe',
+  'BVI (Tortola)',
+  'BVI (Virgin Gorda — YCCS)',
+  'St. Thomas (Yacht Haven Grande)',
+  // Bahamas & Turks
   'Nassau (Bahamas)',
-  // Americas
+  'Albany (Bahamas)',
+  'Bimini (Bahamas)',
+  'Exuma (Bahamas)',
+  'Turks & Caicos',
+  // USA — East Coast / Florida
   'Fort Lauderdale',
   'Miami',
+  'Palm Beach (Rybovich)',
+  'Naples (Florida)',
+  'Key West',
+  'Charleston',
+  'Annapolis',
+  'New York',
   'Newport (RI)',
-  // Rest of world
-  'Dubai',
-  'Phuket',
+  'Nantucket',
+  'Bar Harbor (Maine)',
+  // USA — West Coast
+  'San Diego',
+  'Los Angeles (Marina del Rey)',
+  'Newport Beach (CA)',
+  'San Francisco',
+  'Seattle',
+  // Canada
+  'Vancouver',
+  'Victoria (BC)',
+  // Mexico / Central America
+  'Cabo San Lucas',
+  'La Paz (Mexico)',
+  'Puerto Vallarta',
+  'Panama (Shelter Bay)',
+  'Costa Rica (Los Sueños)',
+  // Middle East
+  'Dubai (Dubai Marina)',
+  'Abu Dhabi (Yas Marina)',
+  'Doha (Qatar)',
+  'Muscat (Oman)',
+  // Atlantic Islands
+  'Madeira (Funchal)',
+  'Las Palmas (Canaries)',
+  'Tenerife',
+  'Azores (Horta)',
+  // UK & Northern Europe
+  'Southampton',
+  'Cowes (Isle of Wight)',
+  'Poole',
+  'Plymouth',
+  'Falmouth (UK)',
+  'London (St Katharine Docks)',
+  'Guernsey',
+  'Jersey',
+  'Amsterdam',
+  'IJmuiden',
+  'Rotterdam',
+  'Hamburg',
+  'Kiel',
+  'Copenhagen',
+  'Stockholm',
+  'Oslo',
+  'Bergen',
+  'Reykjavík',
+  // Asia
+  'Phuket (Yacht Haven)',
+  'Phuket (Royal Phuket Marina)',
+  'Phuket (Boat Lagoon)',
+  'Langkawi',
+  'Singapore (ONE°15)',
+  'Singapore (Sentosa Cove)',
+  'Bali (Benoa)',
+  'Hong Kong',
+  'Tokyo',
+  // Indian Ocean
+  'Maldives',
+  'Seychelles',
+  'Mauritius',
+  // Australia / NZ
+  'Sydney',
+  'Gold Coast',
+  'Brisbane',
+  'Melbourne',
+  'Fremantle (Perth)',
+  'Hobart (Tasmania)',
   'Auckland',
+  // Africa
+  'Cape Town (V&A Waterfront)',
+  // Catch-alls
+  'Crossing / Delivery',
   'Other / At sea',
 ];
 

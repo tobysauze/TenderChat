@@ -143,7 +143,7 @@ function DeptChip({ label, active, onClick }: { label: string; active: boolean; 
 function CrewCard({ profile, onTap }: { profile: DirectoryProfile; onTap: () => void }) {
   const photo = profile.photos[0]?.url || PLACEHOLDER_AVATAR;
   return (
-    <button onClick={onTap} className="text-left bg-white rounded-2xl overflow-hidden shadow-sm relative aspect-[3/4] focus:outline-none focus:ring-2 focus:ring-[var(--tender-red)]">
+    <button onClick={onTap} className="w-full text-left bg-white rounded-2xl overflow-hidden shadow-sm relative aspect-[3/4] focus:outline-none focus:ring-2 focus:ring-[var(--tender-red)]">
       <img src={photo} alt={profile.name} className="w-full h-full object-cover" draggable={false} />
       <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white">
         <p className="font-bold text-base flex items-center gap-1.5">
