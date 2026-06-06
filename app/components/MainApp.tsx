@@ -817,18 +817,8 @@ export default function MainApp() {
         <img src="/tender-logo.svg" alt="Tender" className="h-12 sm:h-16" />
 
         <div className="flex items-center gap-1">
-        <button
-          onClick={() => setShowFilters(true)}
-          className="relative p-2 hover:bg-gray-100 rounded-full"
-          aria-label="Filters"
-        >
-          <AdjustmentsHorizontalIcon className="w-6 h-6 text-[var(--tender-navy)]" />
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--tender-red)] text-white text-[10px] font-bold flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+        {/* Deck filter button removed — the Crew directory has its own marina +
+            department filters built into its header. */}
         <div className="relative">
           <button
             onClick={() => setAccountMenuOpen(o => !o)}

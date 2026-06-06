@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { supabase } from '../../lib/supabase';
 import { MARINAS, DEPARTMENTS, departmentForRole, type Department, type ProfilePrompt } from '../../lib/yachting';
+import MarinaPicker from './MarinaPicker';
 
 const PLACEHOLDER_AVATAR = '/tender-logo.svg';
 
@@ -83,13 +84,7 @@ export default function CrewDirectory({
       <div className="bg-white border-b shrink-0 p-4 space-y-3">
         <div>
           <label className="block text-xs font-semibold text-[var(--tender-navy)] uppercase tracking-wide mb-1">Marina</label>
-          <select
-            value={marina}
-            onChange={e => setMarina(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-          >
-            {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <MarinaPicker value={marina} onChange={v => v && setMarina(v)} placeholder="Search marinas…" />
         </div>
 
         <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">

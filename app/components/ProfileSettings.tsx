@@ -8,6 +8,7 @@ import PhotoUpload, { Photo } from './PhotoUpload';
 import ProfileView from './ProfileView';
 import { computeCompletion } from '../../lib/profileCompletion';
 import { MARINAS, SEASONS, AVAILABILITY, PROMPTS, ProfilePrompt } from '../../lib/yachting';
+import MarinaPicker from './MarinaPicker';
 
 interface ProfileSettingsProps {
   onClose: () => void;
@@ -291,14 +292,13 @@ export default function ProfileSettings({ onClose }: ProfileSettingsProps) {
           <h2 className="text-lg font-semibold text-[var(--tender-navy)]">Season & location</h2>
 
           <Field label="Current marina / port">
-            <select
+            <MarinaPicker
               value={data.home_port}
-              onChange={e => setData(p => ({ ...p, home_port: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-            >
-              <option value="">Select a marina</option>
-              {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+              onChange={v => setData(p => ({ ...p, home_port: v }))}
+              placeholder="Search marinas…"
+              allowEmpty
+              emptyLabel="Pick later"
+            />
           </Field>
 
           <Field label="Season">

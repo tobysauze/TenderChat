@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase, isDemoMode } from '../../lib/supabase';
 import PhotoUpload, { Photo } from './PhotoUpload';
 import { MARINAS, SEASONS, AVAILABILITY, PROMPTS, ProfilePrompt } from '../../lib/yachting';
+import MarinaPicker from './MarinaPicker';
 
 interface ProfileSetupProps {
   onComplete: () => void;
@@ -175,14 +176,15 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
             <p className="text-sm font-semibold text-[var(--tender-navy)] mb-3">Where you are in the season</p>
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Current marina / port</label>
-            <select
-              value={profileData.home_port}
-              onChange={(e) => setProfileData(prev => ({ ...prev, home_port: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)] mb-3"
-            >
-              <option value="">Select a marina</option>
-              {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+            <div className="mb-3">
+              <MarinaPicker
+                value={profileData.home_port}
+                onChange={v => setProfileData(prev => ({ ...prev, home_port: v }))}
+                placeholder="Search marinas…"
+                allowEmpty
+                emptyLabel="Pick later"
+              />
+            </div>
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Season</label>
             <select

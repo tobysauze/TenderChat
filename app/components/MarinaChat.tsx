@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PaperAirplaneIcon } from '@heroicons/react/24/solid';
 import { supabase } from '../../lib/supabase';
 import { MARINAS } from '../../lib/yachting';
+import MarinaPicker from './MarinaPicker';
 
 interface MarinaMessage {
   id: string;
@@ -118,13 +119,7 @@ export default function MarinaChat({ userId, defaultMarina }: MarinaChatProps) {
       {/* Marina picker */}
       <div className="bg-white border-b shrink-0 p-4">
         <label className="block text-xs font-semibold text-[var(--tender-navy)] uppercase tracking-wide mb-1">Marina room</label>
-        <select
-          value={marina}
-          onChange={e => setMarina(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--tender-blue)]"
-        >
-          {MARINAS.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
+        <MarinaPicker value={marina} onChange={v => v && setMarina(v)} placeholder="Search marinas…" />
         <p className="text-xs text-gray-500 mt-2">Open chat for anyone currently in {marina}. Be kind — the same Terms apply.</p>
       </div>
 
